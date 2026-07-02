@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./loopagent.db"
+}
+
+model Agent {
+  id            String   @id @default(uuid())
+  name          String
+  role          String
+  capabilities  String   @default("[]")
+  status        String   @default("idle")
+  endpoint      String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastHeartbeat DateTime @default(now()) @map("last_heartbeat")
+
+  assignedTasks Task[]   @relation("Assignee")
+  reviewedTasks Task[]   @relation("Reviewer")
+  createdTasks  Task[]   @relation("Creator")
+  createdProjects Project[] @relation("ProjectCreator")
+
+  @@map("agents")
+}
+
+model Project {
+  id                 String   @id @default(uuid())
+  name               String
+  description        String?
+  goal               String?
+  acceptanceCriteria String?  @map("acceptance_criteria")
+  extraInfo          String?  @default("{}") @map("extra_info")
+  status             String   @default("planning")
+  creatorAgentId     String   @map("creator_agent_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  creatorAgent Agent    @relation("ProjectCreator", fields: [creatorAgentId], references: [id])
+  tasks        Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id                 String   @id @default(uuid())
+  projectId          String   @map("project_id")
+  parentTaskId       String?  @map("parent_task_id")
+  title              String
+  objective          String
+  acceptanceCriteria String   @map("acceptance_criteria")
+  status             String   @default("pending")
+  assigneeAgentId    String?  @map("assignee_agent_id")
+  reviewerAgentId    String?  @map("reviewer_agent_id")
+  creatorAgentId     String   @map("creator_agent_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  reviewedAt         DateTime? @map("reviewed_at")
+
+  project      Project  @relation(fields: [projectId], references: [id])
+  parentTask   Task?    @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks     Task[]   @relation("SubTasks")
+  assignee     Agent?   @relation("Assignee", fields: [assigneeAgentId], references: [id])
+  reviewer     Agent?   @relation("Reviewer", fields: [reviewerAgentId], references: [id])
+  creator      Agent    @relation("Creator", fields: [creatorAgentId], references: [id])
+  products     Product[]
+
+  @@map("tasks")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  productType String   @map("product_type")
+  url         String
+  description String?
+  version     String   @default("v1")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  @@map("products")
+}

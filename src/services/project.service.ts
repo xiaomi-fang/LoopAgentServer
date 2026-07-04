@@ -5,6 +5,7 @@ export async function createProject(data: {
   description?: string;
   goal?: string;
   acceptanceCriteria?: string;
+  githubUrl?: string;
   extraInfo?: Record<string, any>;
   creatorAgentId: string;
 }) {
@@ -14,6 +15,7 @@ export async function createProject(data: {
       description: data.description ?? null,
       goal: data.goal ?? null,
       acceptanceCriteria: data.acceptanceCriteria ?? null,
+      githubUrl: data.githubUrl ?? null,
       extraInfo: JSON.stringify(data.extraInfo ?? {}),
       status: 'planning',
       creatorAgentId: data.creatorAgentId,

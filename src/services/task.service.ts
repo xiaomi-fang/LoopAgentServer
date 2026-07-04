@@ -11,6 +11,7 @@ export async function createTask(data: {
   objective: string;
   acceptanceCriteria: string;
   creatorAgentId: string;
+  assigneeAgentId?: string;
   reviewerAgentId?: string;
 }) {
   return prisma.task.create({
@@ -22,6 +23,7 @@ export async function createTask(data: {
       acceptanceCriteria: data.acceptanceCriteria,
       status: TaskStatus.PENDING,
       creatorAgentId: data.creatorAgentId,
+      assigneeAgentId: data.assigneeAgentId ?? null,
       reviewerAgentId: data.reviewerAgentId ?? null,
     },
   });

@@ -6,7 +6,7 @@ import { asyncHandler } from '../middleware/async-handler';
 const router = Router();
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { project_id, parent_task_id, title, objective, acceptance_criteria, creator_agent_id, reviewer_agent_id } = req.body;
+  const { project_id, parent_task_id, title, objective, acceptance_criteria, creator_agent_id, assignee_agent_id, reviewer_agent_id } = req.body;
   if (!project_id || !title || !objective || !acceptance_criteria || !creator_agent_id) {
     res.status(400).json({ error: 'project_id, title, objective, acceptance_criteria, creator_agent_id are required' });
     return;
@@ -18,6 +18,7 @@ router.post('/', asyncHandler(async (req, res) => {
     objective,
     acceptanceCriteria: acceptance_criteria,
     creatorAgentId: creator_agent_id,
+    assigneeAgentId: assignee_agent_id,
     reviewerAgentId: reviewer_agent_id,
   });
   res.json(task);

@@ -5,7 +5,7 @@ import { asyncHandler } from '../middleware/async-handler';
 const router = Router();
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, description, goal, acceptance_criteria, extra_info, creator_agent_id } = req.body;
+  const { name, description, goal, acceptance_criteria, github_url, extra_info, creator_agent_id } = req.body;
   if (!name || !creator_agent_id) {
     res.status(400).json({ error: 'name and creator_agent_id are required' });
     return;
@@ -15,6 +15,7 @@ router.post('/', asyncHandler(async (req, res) => {
     description,
     goal,
     acceptanceCriteria: acceptance_criteria,
+    githubUrl: github_url,
     extraInfo: extra_info,
     creatorAgentId: creator_agent_id,
   });

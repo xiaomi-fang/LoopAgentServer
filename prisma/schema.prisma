@@ -31,6 +31,7 @@ model Project {
   description        String?
   goal               String?
   acceptanceCriteria String?  @map("acceptance_criteria")
+  githubUrl          String?  @map("github_url")
   extraInfo          String?  @default("{}") @map("extra_info")
   status             String   @default("planning")
   creatorAgentId     String   @map("creator_agent_id")

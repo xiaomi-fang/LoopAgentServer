@@ -62,17 +62,21 @@ process.on('unhandledRejection', (reason) => {
   console.error('[UNHANDLED_REJECTION]', reason);
 });
 
-async function main() {
-  setInterval(disasterRecovery, DISASTER_CHECK_INTERVAL_MS);
+export { app };
 
-  app.listen(PORT, () => {
-    console.log(`[LoopAgent] MCP Server running on http://localhost:${PORT}`);
-    console.log(`[LoopAgent] Heartbeat timeout: ${HEARTBEAT_TIMEOUT_MINUTES} min`);
-    console.log(`[LoopAgent] Disaster check interval: ${DISASTER_CHECK_INTERVAL_MS / 1000}s`);
+if (require.main === module) {
+  async function main() {
+    setInterval(disasterRecovery, DISASTER_CHECK_INTERVAL_MS);
+
+    app.listen(PORT, () => {
+      console.log(`[LoopAgent] MCP Server running on http://localhost:${PORT}`);
+      console.log(`[LoopAgent] Heartbeat timeout: ${HEARTBEAT_TIMEOUT_MINUTES} min`);
+      console.log(`[LoopAgent] Disaster check interval: ${DISASTER_CHECK_INTERVAL_MS / 1000}s`);
+    });
+  }
+
+  main().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }
-
-main().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});

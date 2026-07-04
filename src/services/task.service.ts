@@ -1,4 +1,5 @@
 import prisma from '../prisma';
+import { Prisma } from '@prisma/client';
 import { validateTransition, isTerminalStatus } from '../state-machine';
 import { TaskStatus, TaskStatusType } from '../types';
 
@@ -26,7 +27,7 @@ export async function createTask(data: {
 }
 
 export async function claimTask(taskId: string, agentId: string) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const task = await tx.task.findUnique({ where: { id: taskId } });
     if (!task) throw new Error('Task not found');
     if (task.status !== TaskStatus.PENDING) {
@@ -75,15 +76,15 @@ export async function getNextTask(agentId: string, projectId?: string) {
 
   if (capabilities.length === 0) return candidates[0];
 
-  const scored = candidates.map((task) => {
+  const scored = candidates.map((task: { title: string; objective: string }) => {
     const textToMatch = `${task.title} ${task.objective}`.toLowerCase();
-    const score = capabilities.reduce((sum, cap) => {
+    const score = capabilities.reduce((sum: number, cap: string) => {
       return sum + (textToMatch.includes(cap.toLowerCase()) ? 1 : 0);
     }, 0);
     return { task, score };
   });
 
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort((a: { score: number }, b: { score: number }) => b.score - a.score);
   return scored[0].task;
 }
 
@@ -92,7 +93,7 @@ export async function updateTaskStatus(
   newStatus: TaskStatusType,
   payload?: { submitNote?: string; comment?: string }
 ) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const task = await tx.task.findUnique({
       where: { id: taskId },
       include: { products: true },
@@ -159,7 +160,7 @@ export async function reviewTask(
   result: 'pass' | 'fail',
   comment?: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const task = await tx.task.findUnique({ where: { id: taskId } });
 
     if (!task) throw new Error('Task not found');
@@ -201,7 +202,7 @@ export async function decomposeTask(
   subTasks: { title: string; objective: string; acceptanceCriteria: string }[],
   creatorAgentId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const parent = await tx.task.findUnique({ where: { id: parentTaskId } });
     if (!parent) throw new Error('Parent task not found');
 

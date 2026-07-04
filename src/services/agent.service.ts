@@ -1,4 +1,5 @@
 import prisma from '../prisma';
+import { Prisma } from '@prisma/client';
 
 export async function registerAgent(data: {
   name: string;
@@ -28,13 +29,13 @@ export async function heartbeat(agentId: string) {
 }
 
 export async function discoverAgents(capabilityFilter?: string) {
-  const where: any = { status: 'idle' };
+  const where: Prisma.AgentWhereInput = { status: 'idle' };
 
   const agents = await prisma.agent.findMany({ where });
-  let result = agents.map((a) => ({ ...a, capabilities: JSON.parse(a.capabilities) }));
+  let result = agents.map((a: any) => ({ ...a, capabilities: JSON.parse(a.capabilities) }));
 
   if (capabilityFilter) {
-    result = result.filter((a) =>
+    result = result.filter((a: { capabilities: string[] }) =>
       a.capabilities.some(
         (cap: string) => cap.toLowerCase().includes(capabilityFilter.toLowerCase())
       )

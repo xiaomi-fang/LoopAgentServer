@@ -20,6 +20,11 @@ router.post('/', asyncHandler(async (req, res) => {
   res.json(product);
 }));
 
+router.get('/', asyncHandler(async (req, res) => {
+  const products = await productService.getAllProducts();
+  res.json(products);
+}));
+
 router.get('/:taskId', asyncHandler(async (req, res) => {
   const productType = typeof req.query.product_type === 'string' ? req.query.product_type : undefined;
   const products = await productService.getTaskProducts(req.params.taskId as string, productType);

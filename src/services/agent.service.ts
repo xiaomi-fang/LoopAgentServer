@@ -29,7 +29,7 @@ export async function heartbeat(agentId: string) {
 }
 
 export async function discoverAgents(capabilityFilter?: string) {
-  const where: Prisma.AgentWhereInput = { status: 'idle' };
+  const where: Prisma.AgentWhereInput = {};
 
   const agents = await prisma.agent.findMany({ where });
   let result = agents.map((a: any) => ({ ...a, capabilities: JSON.parse(a.capabilities) }));

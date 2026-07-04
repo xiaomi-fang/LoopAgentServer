@@ -7,13 +7,15 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
     "db:push": "prisma db push",
     "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
+    "axios": "^1.18.1",
     "express": "^4.21.0",
+    "openai": "^6.45.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -23,7 +25,7 @@
     "@types/supertest": "^7.2.0",
     "@types/uuid": "^10.0.0",
     "jest": "^30.4.2",
-    "prisma": "^6.6.0",
+    "prisma": { "schema": "./prisma/schema.prisma" },
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "tsx": "^4.19.0",

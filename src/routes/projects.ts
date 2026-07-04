@@ -21,6 +21,11 @@ router.post('/', asyncHandler(async (req, res) => {
   res.json(project);
 }));
 
+router.get('/', asyncHandler(async (req, res) => {
+  const projects = await projectService.getAllProjects();
+  res.json(projects);
+}));
+
 router.get('/:id/context', asyncHandler(async (req, res) => {
   const context = await projectService.getProjectContext(req.params.id as string);
   if (!context) {

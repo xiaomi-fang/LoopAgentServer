@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.png
+*.log
+package-lock.json
+.env
+loopagent.db
+frontend/src/
+check_*.py
+clean_data.js
+fix_product_type.js
+test_*.js
+test_*.ts
+validate_flow.js
+server.log

@@ -23,6 +23,11 @@ router.post('/', asyncHandler(async (req, res) => {
   res.json(task);
 }));
 
+router.get('/', asyncHandler(async (req, res) => {
+  const tasks = await taskService.getAllTasks();
+  res.json(tasks);
+}));
+
 router.post('/claim', asyncHandler(async (req, res) => {
   const { task_id, agent_id } = req.body;
   if (!task_id || !agent_id) {
@@ -84,9 +89,13 @@ router.post('/decompose', asyncHandler(async (req, res) => {
   const mapped = (sub_tasks as any[]).map((st: any) => ({
     title: st.title,
     objective: st.objective,
-    acceptanceCriteria: st.acceptance_criteria,
   }));
-  const created = await taskService.decomposeTask(parent_task_id, mapped, creator_agent_id);
+
+  const created = await taskService.decompose({
+    parentTaskId: parent_task_id,
+    subTasks: mapped,
+    creatorAgentId: creator_agent_id,
+  });
   res.json(created);
 }));
 

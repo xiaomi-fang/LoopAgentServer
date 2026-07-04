@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import prisma from './prisma';
 import { errorHandler } from './middleware/error-handler';
 import agentRoutes from './routes/agents';
@@ -21,6 +22,14 @@ app.use('/agents', agentRoutes);
 app.use('/projects', projectRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/products', productRoutes);
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Catch-all: serve index.html for any non-API route (SPA fallback)
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 
 app.use(errorHandler);
 

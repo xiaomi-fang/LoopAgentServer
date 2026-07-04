@@ -1,7 +1,8 @@
 import prisma from '../prisma';
 import { Prisma } from '@prisma/client';
-import { validateTransition, isTerminalStatus } from '../state-machine';
+import { validateTransition } from '../state-machine';
 import { TaskStatus, TaskStatusType } from '../types';
+import * as llmService from '../services/llm.service';
 
 export async function createTask(data: {
   projectId: string;
@@ -26,6 +27,22 @@ export async function createTask(data: {
   });
 }
 
+export async function getAllTasks() {
+  return prisma.task.findMany({
+    include: {
+      products: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function getTaskById(taskId: string) {
+  return prisma.task.findUnique({
+    where: { id: taskId },
+    include: { products: true },
+  });
+}
+
 export async function claimTask(taskId: string, agentId: string) {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const task = await tx.task.findUnique({ where: { id: taskId } });
@@ -34,6 +51,7 @@ export async function claimTask(taskId: string, agentId: string) {
       throw new Error(`Task cannot be claimed: current status is "${task.status}"`);
     }
 
+    // 1. Update status to IN_PROGRESS
     const updated = await tx.task.update({
       where: { id: taskId, status: TaskStatus.PENDING },
       data: {
@@ -42,9 +60,30 @@ export async function claimTask(taskId: string, agentId: string) {
       },
     });
 
+    // 2. Update agent status
     await tx.agent.update({
       where: { id: agentId },
       data: { status: 'busy' },
+    });
+
+    // 3. Generate plan and update task
+    // We need to fetch the project context for the plan
+    const project = await tx.project.findUnique({
+      where: { id: task.projectId },
+      include: { tasks: { include: { products: true, subTasks: true } } }
+    });
+
+    const plan = await llmService.generatePlan(
+      task.objective,
+      task.acceptanceCriteria,
+      project ? JSON.stringify(project) : {}
+    );
+
+    await tx.task.update({
+      where: { id: taskId },
+      data: {
+        submitNote: JSON.stringify(plan),
+      },
     });
 
     return updated;
@@ -76,7 +115,7 @@ export async function getNextTask(agentId: string, projectId?: string) {
 
   if (capabilities.length === 0) return candidates[0];
 
-  const scored = candidates.map((task: { title: string; objective: string }) => {
+  const scored = candidates.map((task: any) => {
     const textToMatch = `${task.title} ${task.objective}`.toLowerCase();
     const score = capabilities.reduce((sum: number, cap: string) => {
       return sum + (textToMatch.includes(cap.toLowerCase()) ? 1 : 0);
@@ -84,15 +123,11 @@ export async function getNextTask(agentId: string, projectId?: string) {
     return { task, score };
   });
 
-  scored.sort((a: { score: number }, b: { score: number }) => b.score - a.score);
+  scored.sort((a: any, b: any) => b.score - a.score);
   return scored[0].task;
 }
 
-export async function updateTaskStatus(
-  taskId: string,
-  newStatus: TaskStatusType,
-  payload?: { submitNote?: string; comment?: string }
-) {
+export async function updateTaskStatus(taskId: string, newStatus: TaskStatusType, payload?: any): Promise<any> {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const task = await tx.task.findUnique({
       where: { id: taskId },
@@ -103,125 +138,105 @@ export async function updateTaskStatus(
 
     validateTransition(task.status as TaskStatusType, newStatus);
 
-    if (newStatus === TaskStatus.PENDING_REVIEW) {
-      if (!payload?.submitNote) {
-        throw new Error('Submit note is required when submitting for review');
-      }
-      if (task.products.length === 0) {
-        throw new Error('Must publish at least one product before submitting for review');
-      }
-      if (!task.reviewerAgentId) {
-        throw new Error('Task has no reviewer assigned');
-      }
-    }
-
-    if (newStatus === TaskStatus.FAILED) {
-      await tx.agent.update({
-        where: { id: task.assigneeAgentId! },
-        data: { status: 'idle' },
-      });
-    }
-
-    const data: any = { status: newStatus };
-    if (isTerminalStatus(newStatus)) {
-      data.reviewedAt = new Date();
-      if (task.assigneeAgentId) {
-        await tx.agent.update({
-          where: { id: task.assigneeAgentId },
-          data: { status: 'idle' },
-        });
-      }
-    }
-
     const updated = await tx.task.update({
       where: { id: taskId },
-      data,
+      data: {
+        status: newStatus,
+        submitNote: payload?.submitNote ?? null,
+        comment: payload?.comment ?? null,
+      } as any,
     });
-
-    if (newStatus === TaskStatus.PENDING_REVIEW && task.reviewerAgentId) {
-      const hasReviewTasks = await tx.task.count({
-        where: {
-          reviewerAgentId: task.reviewerAgentId,
-          status: TaskStatus.PENDING_REVIEW,
-        },
-      });
-      console.log(
-        `[INFO] Agent ${task.reviewerAgentId} has ${hasReviewTasks} tasks pending review`
-      );
-    }
 
     return updated;
   });
 }
 
-export async function reviewTask(
-  taskId: string,
-  reviewerId: string,
-  result: 'pass' | 'fail',
-  comment?: string
-) {
+export async function reviewTask(taskId: string, reviewerId: string, result: 'pass' | 'fail', comment: string) {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const task = await tx.task.findUnique({ where: { id: taskId } });
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+      include: { products: true },
+    });
 
     if (!task) throw new Error('Task not found');
+
     if (task.status !== TaskStatus.PENDING_REVIEW) {
-      throw new Error(`Task is not pending review, current status: "${task.status}"`);
-    }
-    if (task.reviewerAgentId !== reviewerId) {
-      throw new Error('You are not the assigned reviewer for this task');
-    }
-    if (task.assigneeAgentId === reviewerId) {
-      throw new Error('Reviewer cannot be the same as the assignee');
+      throw new Error(`Task cannot be reviewed: current status is "${task.status}"`);
     }
 
-    const newStatus = result === 'pass' ? TaskStatus.COMPLETED : TaskStatus.IN_PROGRESS;
+    if (task.reviewerAgentId && task.reviewerAgentId !== reviewerId) {
+      throw new Error(`Reviewer ID ${reviewerId} does not match assigned reviewer ${task.reviewerAgentId}`);
+    }
 
-    const data: any = {
-      status: newStatus,
-      reviewedAt: new Date(),
+    // Update data with status change, comment, and optional reviewer assignment
+    const updateData: any = {
+      status: result === 'pass' ? TaskStatus.COMPLETED : TaskStatus.FAILED,
+      comment: comment,
     };
+    if (!task.reviewerAgentId) {
+      updateData.reviewerAgentId = reviewerId;
+    }
 
     const updated = await tx.task.update({
       where: { id: taskId },
-      data,
+      data: updateData,
     });
 
-    if (task.assigneeAgentId) {
-      await tx.agent.update({
-        where: { id: task.assigneeAgentId },
-        data: { status: result === 'pass' ? 'idle' : 'busy' },
-      });
-    }
-
-    return { task: updated, result, comment };
+    return updated;
   });
 }
 
-export async function decomposeTask(
-  parentTaskId: string,
-  subTasks: { title: string; objective: string; acceptanceCriteria: string }[],
-  creatorAgentId: string
-) {
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const parent = await tx.task.findUnique({ where: { id: parentTaskId } });
-    if (!parent) throw new Error('Parent task not found');
+export async function publishProduct(taskId: string, data: {
+  productType: string;
+  url: string;
+  description?: string;
+}) {
+  return prisma.product.create({
+    data: {
+      taskId,
+      productType: data.productType,
+      url: data.url,
+      description: data.description,
+    },
+  });
+}
 
-    const created = await Promise.all(
-      subTasks.map((st) =>
+export async function decompose(data: {
+  parentTaskId: string;
+  subTasks: { title: string; objective: string }[];
+  creatorAgentId: string;
+}) {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const parentTask = await tx.task.findUnique({
+      where: { id: data.parentTaskId },
+    });
+
+    if (!parentTask) throw new Error('Parent task not found');
+    if (parentTask.status !== TaskStatus.IN_PROGRESS) {
+      throw new Error(`Task must be in progress to decompose: current status is "${parentTask.status}"`);
+    }
+
+    const createdTasks = await Promise.all(
+      data.subTasks.map((st) =>
         tx.task.create({
           data: {
-            projectId: parent.projectId,
-            parentTaskId,
+            projectId: parentTask.projectId,
+            parentTaskId: data.parentTaskId,
             title: st.title,
             objective: st.objective,
-            acceptanceCriteria: st.acceptanceCriteria,
+            acceptanceCriteria: 'Generated from parent',
+            creatorAgentId: data.creatorAgentId,
             status: TaskStatus.PENDING,
-            creatorAgentId,
           },
         })
       )
     );
 
-    return created;
+    await tx.task.update({
+      where: { id: data.parentTaskId },
+      data: { status: TaskStatus.COMPLETED },
+    });
+
+    return createdTasks;
   });
 }

@@ -21,6 +21,13 @@ export async function publishProduct(data: {
   });
 }
 
+export async function getAllProducts() {
+  return prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { task: true },
+  });
+}
+
 export async function getTaskProducts(taskId: string, productType?: string) {
   const where: any = { taskId };
   if (productType) where.productType = productType;

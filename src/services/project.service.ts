@@ -21,6 +21,12 @@ export async function createProject(data: {
   });
 }
 
+export async function getAllProjects() {
+  return prisma.project.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function getProject(projectId: string) {
   return prisma.project.findUnique({ where: { id: projectId } });
 }

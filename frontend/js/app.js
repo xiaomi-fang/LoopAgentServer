@@ -273,7 +273,7 @@
               (showForwardBtn ? 'text-white opacity-70 hover:opacity-100' : 'text-gray-500 opacity-40'),
           }, React.createElement('i', { className: 'fas fa-arrow-right' })),
         ),
-        React.createElement('span', { className: 'font-bold text-sm' }, 'LoopAgent'),
+        React.createElement('span', { className: 'font-bold text-sm' }, 'LoopEngineeringManager'),
       ),
 
       /* 侧边栏遮罩 */
@@ -288,7 +288,7 @@
         React.createElement('div', { className: 'p-6' },
           React.createElement('h1', { className: 'text-xl font-bold flex items-center' },
             React.createElement('i', { className: 'fas fa-sync-alt mr-2 text-blue-400' }),
-            'LoopAgent',
+            'LoopEngineeringManager',
           ),
           React.createElement('p', { className: 'text-xs text-gray-400 mt-1' }, 'v' + window.LoopAgent.version),
         ),
@@ -327,7 +327,7 @@
             ),
           ),
         ),
-        React.createElement('div', { className: 'p-4 text-xs text-gray-500 border-t border-gray-700' }, 'LoopAgent 管理后台'),
+        React.createElement('div', { className: 'p-4 text-xs text-gray-500 border-t border-gray-700 hidden lg:block' }, 'LoopEngineeringManager 管理后台'),
       ),
 
       /* 主内容区 */

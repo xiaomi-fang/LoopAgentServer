@@ -4,6 +4,7 @@
   const api = window.LoopAgent.api;
 
   const REVIEW_STATUS_MAP = {
+    pending_activation: '待激活',
     planning: '规划中',
     planned: '规划完毕',
     under_review: '审核中',
@@ -14,6 +15,7 @@
     completed: '已完成',
   };
   const REVIEW_STATUS_COLORS = {
+    pending_activation: 'bg-gray-100 text-gray-400',
     planning: 'bg-gray-100 text-gray-600',
     planned: 'bg-teal-100 text-teal-700',
     under_review: 'bg-yellow-100 text-yellow-700',
@@ -26,6 +28,7 @@
 
   // 管理员可选的审核状态
   const ADMIN_STATUS_OPTIONS = [
+    { value: 'pending_activation', label: '待激活' },
     { value: 'planning', label: '规划中' },
     { value: 'planned', label: '规划完毕' },
     { value: 'under_review', label: '审核中' },

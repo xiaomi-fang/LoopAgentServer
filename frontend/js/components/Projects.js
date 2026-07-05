@@ -4,17 +4,20 @@
   const api = window.LoopAgent.api;
 
   const REVIEW_STATUS_MAP = {
+    pending_activation: '待激活',
     planning: '规划中', planned: '规划完毕',
     under_review: '审核中', review_failed: '审核不通过', review_passed: '审核通过',
     in_development: '研发中', development_paused: '研发暂停', completed: '已完成',
   };
   const REVIEW_STATUS_COLORS = {
+    pending_activation: 'bg-gray-100 text-gray-400',
     planning: 'bg-gray-100 text-gray-500', planned: 'bg-teal-100 text-teal-700',
     under_review: 'bg-yellow-100 text-yellow-700', review_failed: 'bg-red-100 text-red-600',
     review_passed: 'bg-green-100 text-green-600', in_development: 'bg-blue-100 text-blue-600',
     development_paused: 'bg-orange-100 text-orange-600', completed: 'bg-green-100 text-green-700',
   };
   const ADMIN_STATUS_OPTIONS = [
+    { value: 'pending_activation', label: '待激活' },
     { value: 'planning', label: '规划中' }, { value: 'planned', label: '规划完毕' },
     { value: 'under_review', label: '审核中' }, { value: 'review_failed', label: '审核不通过' },
     { value: 'review_passed', label: '审核通过' }, { value: 'in_development', label: '研发中' },

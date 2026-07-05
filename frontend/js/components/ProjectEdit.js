@@ -4,6 +4,7 @@
   const api = window.LoopAgent.api;
 
   const STATUS_OPTIONS = [
+    { value: 'pending_activation', label: '待激活' },
     { value: 'planning', label: '规划中' },
     { value: 'planned', label: '规划完毕' },
     { value: 'under_review', label: '审核中' },

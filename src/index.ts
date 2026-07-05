@@ -32,8 +32,8 @@ app.use('/products', productRoutes);
 // POST /mcp/v1/execute  — 执行指定工具
 // GET  /mcp             — SSE 流（streamable_http）
 // POST /mcp             — JSON-RPC 消息（streamable_http）
-app.use('/mcp', mcpSseRoutes);
-app.use('/mcp', mcpRoutes);
+app.use('/loop_engineering/mcp', mcpSseRoutes);
+app.use('/loop_engineering/mcp', mcpRoutes);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -92,7 +92,7 @@ if (require.main === module) {
     app.listen(PORT, () => {
       console.log(`[环枢] Server running on http://localhost:${PORT}`);
       console.log(`[环枢] REST API   → /agents, /projects, /tasks, /products, /auth`);
-      console.log(`[环枢] MCP API    → POST /mcp/v1/tools, POST /mcp/v1/execute, SSE/JSON-RPC /mcp`);
+      console.log(`[环枢] MCP API    → POST /loop_engineering/mcp/v1/tools, POST /loop_engineering/mcp/v1/execute, SSE/JSON-RPC /loop_engineering/mcp`);
       console.log(`[环枢] Frontend   → http://localhost:${PORT}`);
       console.log(`[环枢] Heartbeat timeout: ${HEARTBEAT_TIMEOUT_MINUTES} min`);
       console.log(`[环枢] Disaster check interval: ${DISASTER_CHECK_INTERVAL_MS / 1000}s`);

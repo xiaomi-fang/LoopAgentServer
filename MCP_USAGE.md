@@ -1,6 +1,7 @@
 # MCP 服务使用说明
 
 > 环枢（LoopEngineeringManager）对外暴露标准 [Model Context Protocol](https://modelcontextprotocol.io) 接口，
+> 基础路径：`http://localhost:3000/loop_engineering/mcp`
 > 允许 LLM 或 AI 客户端通过统一的工具调用协议与系统交互。
 >
 > ⚠️ **安全策略：**
@@ -38,8 +39,8 @@
 ### 端点地址
 
 ```
-POST http://localhost:3000/mcp/v1/tools
-POST http://localhost:3000/mcp/v1/execute
+POST http://localhost:3000/loop_engineering/mcp/v1/tools
+POST http://localhost:3000/loop_engineering/mcp/v1/execute
 ```
 
 > 端口号由环境变量 `PORT` 控制，默认 `3000`。
@@ -48,18 +49,18 @@ POST http://localhost:3000/mcp/v1/execute
 
 ```bash
 # 1. 查看所有可用工具
-curl -s -X POST http://localhost:3000/mcp/v1/tools \
+curl -s -X POST http://localhost:3000/loop_engineering/mcp/v1/tools \
   -H "Content-Type: application/json" \
   | python3 -m json.tool | head -30
 
 # 2. 调用工具：列出所有项目
-curl -s -X POST http://localhost:3000/mcp/v1/execute \
+curl -s -X POST http://localhost:3000/loop_engineering/mcp/v1/execute \
   -H "Content-Type: application/json" \
   -d '{"name":"list_projects","arguments":{}}' \
   | python3 -m json.tool
 
 # 3. 调用工具：发现空闲智能体
-curl -s -X POST http://localhost:3000/mcp/v1/execute \
+curl -s -X POST http://localhost:3000/loop_engineering/mcp/v1/execute \
   -H "Content-Type: application/json" \
   -d '{"name":"discover_agents","arguments":{}}' \
   | python3 -m json.tool
@@ -74,7 +75,7 @@ curl -s -X POST http://localhost:3000/mcp/v1/execute \
 **请求：**
 
 ```http
-POST /mcp/v1/tools
+POST /loop_engineering/mcp/v1/tools
 Content-Type: application/json
 
 {}
@@ -115,7 +116,7 @@ LLM 客户端通过此接口获取所有能力列表，每个工具包含：
 **请求：**
 
 ```http
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 Content-Type: application/json
 
 {
@@ -175,7 +176,7 @@ Content-Type: application/json
 **注册智能体示例：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "register_agent",
   "arguments": {
@@ -189,7 +190,7 @@ POST /mcp/v1/execute
 **发现空闲智能体示例：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "discover_agents",
   "arguments": {
@@ -211,7 +212,7 @@ POST /mcp/v1/execute
 **创建项目示例：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "create_project",
   "arguments": {
@@ -230,7 +231,7 @@ POST /mcp/v1/execute
 用于 LLM 理解项目全貌，返回包含任务树和产物的完整数据结构。
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "get_project_context",
   "arguments": {
@@ -255,7 +256,7 @@ POST /mcp/v1/execute
 **创建任务示例：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "create_task",
   "arguments": {
@@ -273,7 +274,7 @@ POST /mcp/v1/execute
 **认领任务（智能体调用）：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "claim_task",
   "arguments": {
@@ -286,7 +287,7 @@ POST /mcp/v1/execute
 **提交任务（智能体调用）：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "update_task_status",
   "arguments": {
@@ -300,7 +301,7 @@ POST /mcp/v1/execute
 **审核任务（审核者调用）：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "review_task",
   "arguments": {
@@ -332,7 +333,7 @@ pending  →  in_progress  →  pending_review  →  completed
 **发布产物示例：**
 
 ```json
-POST /mcp/v1/execute
+POST /loop_engineering/mcp/v1/execute
 {
   "name": "publish_product",
   "arguments": {
@@ -407,7 +408,7 @@ MCP 接口与 REST API **并行运行，功能等价**，不互相替代。
 
 **两者共享同一套 Service 层，数据保持一致。**
 
-如果需要为 MCP 增加认证（如 API Key），可以在 `src/routes/mcp.ts` 中添加中间件。
+如果需要为 MCP 增加认证（如 API Key），可以在 `src/routes/mcp.ts` 或 `src/routes/mcp-sse.ts` 中添加中间件。
 
 ---
 
@@ -417,7 +418,7 @@ MCP 接口与 REST API **并行运行，功能等价**，不互相替代。
 
 是的，都在 `localhost:3000`，只是路径不同：
 - REST: `http://localhost:3000/projects`
-- MCP:  `http://localhost:3000/mcp/v1/tools`
+- MCP:  `http://localhost:3000/loop_engineering/mcp/v1/tools`
 
 **Q: MCP 接口需要管理员认证吗？**
 
@@ -432,7 +433,7 @@ MCP 接口与 REST API **并行运行，功能等价**，不互相替代。
 {
   "mcpServers": {
     "环枢": {
-      "url": "http://localhost:3000/mcp",
+      "url": "http://localhost:3000/loop_engineering/mcp",
       "type": "mcp"
     }
   }

@@ -34,3 +34,24 @@ export async function getTaskProducts(taskId: string, productType?: string) {
 
   return prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } });
 }
+
+export async function deleteProduct(productId: string) {
+  await prisma.product.delete({ where: { id: productId } });
+  return { id: productId };
+}
+
+export async function updateProduct(productId: string, data: {
+  productType?: string;
+  url?: string;
+  description?: string;
+}) {
+  const updateData: any = {};
+  if (data.productType !== undefined) updateData.productType = data.productType;
+  if (data.url !== undefined) updateData.url = data.url;
+  if (data.description !== undefined) updateData.description = data.description;
+
+  return prisma.product.update({
+    where: { id: productId },
+    data: updateData,
+  });
+}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as taskService from '../services/task.service';
 import { TaskStatusType } from '../types';
 import { asyncHandler } from '../middleware/async-handler';
+import { requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -27,6 +28,13 @@ router.post('/', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
   const tasks = await taskService.getAllTasks();
   res.json(tasks);
+}));
+
+/** 获取项目的任务树 */
+router.get('/tree/:projectId', asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId as string;
+  const tree = await taskService.getTaskTree(projectId);
+  res.json(tree);
 }));
 
 router.post('/claim', asyncHandler(async (req, res) => {
@@ -91,13 +99,43 @@ router.post('/decompose', asyncHandler(async (req, res) => {
     title: st.title,
     objective: st.objective,
   }));
-
   const created = await taskService.decompose({
     parentTaskId: parent_task_id,
     subTasks: mapped,
     creatorAgentId: creator_agent_id,
   });
   res.json(created);
+}));
+
+/** 拖拽/右键重设父任务或排序 */
+router.patch('/:id/reparent', asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  const { parent_task_id, new_index } = req.body;
+  const task = await taskService.reparentTask(id, {
+    parentTaskId: parent_task_id,
+    newIndex: new_index,
+  });
+  res.json(task);
+}));
+
+// ---- 超级管理员操作 ---- //
+
+router.delete('/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  await taskService.deleteTask(id);
+  res.json({ message: '任务已删除', id });
+}));
+
+router.put('/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  const { title, objective, acceptance_criteria, assignee_agent_id, reviewer_agent_id } = req.body;
+  const task = await taskService.updateTask(id, {
+    title, objective,
+    acceptanceCriteria: acceptance_criteria,
+    assigneeAgentId: assignee_agent_id,
+    reviewerAgentId: reviewer_agent_id,
+  });
+  res.json(task);
 }));
 
 export default router;

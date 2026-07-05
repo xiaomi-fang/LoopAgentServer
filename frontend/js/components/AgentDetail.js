@@ -3,7 +3,7 @@
   const { useState, useEffect } = React;
   const api = window.LoopAgent.api;
 
-  function AgentDetail({ agentId, onBack, setMessage }) {
+  function AgentDetail({ agentId, onBack, setMessage, openProjectDetail, isAdmin }) {
     const [agent, setAgent] = useState(null);
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
@@ -59,6 +59,20 @@
             <i className="fas fa-arrow-left mr-1"></i>返回
           </button>
           <h1 className="text-2xl font-bold text-gray-800">🤖 {agent.name} 详情</h1>
+          {isAdmin && (
+            <button onClick={async () => {
+              if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
+              try {
+                await api.delete(`/agents/${agent.id}`);
+                setMessage({ type: 'success', content: `智能体「${agent.name}」已删除` });
+                onBack();
+              } catch (err) {
+                setMessage({ type: 'error', content: '删除失败：' + err.message });
+              }
+            }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 ml-auto">
+              <i className="fas fa-trash-alt mr-1"></i>删除智能体
+            </button>
+          )}
         </div>
 
         {/* 基本信息 */}

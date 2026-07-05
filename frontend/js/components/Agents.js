@@ -3,7 +3,7 @@
   const { useState, useEffect } = React;
   const api = window.LoopAgent.api;
 
-  function Agents({ setMessage, onOpenAgentDetail }) {
+  function Agents({ setMessage, onOpenAgentDetail, isAdmin }) {
     const [agents, setAgents] = useState([]);
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
@@ -157,10 +157,28 @@
                         </div>
                       </td>
                       <td className="py-3">
-                        <button onClick={() => onOpenAgentDetail(agent.id)}
-                          className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">
-                          查看详情
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => onOpenAgentDetail(agent.id)}
+                            className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">
+                            查看详情
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button onClick={async () => {
+                                if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
+                                try {
+                                  await api.delete(`/agents/${agent.id}`);
+                                  setMessage({ type: 'success', content: `智能体「${agent.name}」已删除` });
+                                  fetchData();
+                                } catch (err) {
+                                  setMessage({ type: 'error', content: '删除失败：' + err.message });
+                                }
+                              }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">
+                                <i className="fas fa-trash-alt mr-1"></i>删除
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -58,3 +58,22 @@ export async function setAgentStatus(agentId: string, status: string) {
   });
   return { ...agent, capabilities: JSON.parse(agent.capabilities) };
 }
+
+export async function deleteAgent(agentId: string) {
+  await prisma.agent.delete({ where: { id: agentId } });
+  return { id: agentId };
+}
+
+export async function updateAgent(agentId: string, data: { name?: string; role?: string; capabilities?: string[]; status?: string }) {
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.capabilities !== undefined) updateData.capabilities = JSON.stringify(data.capabilities);
+  if (data.status !== undefined) updateData.status = data.status;
+
+  const agent = await prisma.agent.update({
+    where: { id: agentId },
+    data: updateData,
+  });
+  return { ...agent, capabilities: JSON.parse(agent.capabilities) };
+}

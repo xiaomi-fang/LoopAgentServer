@@ -242,3 +242,85 @@ export async function decompose(data: {
     return createdTasks;
   });
 }
+
+export async function deleteTask(taskId: string) {
+  await prisma.product.deleteMany({ where: { taskId } });
+  await prisma.task.deleteMany({ where: { parentTaskId: taskId } });
+  await prisma.task.delete({ where: { id: taskId } });
+  return { id: taskId };
+}
+
+export async function updateTask(taskId: string, data: {
+  title?: string;
+  objective?: string;
+  acceptanceCriteria?: string;
+  assigneeAgentId?: string;
+  reviewerAgentId?: string;
+}) {
+  const updateData: any = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.objective !== undefined) updateData.objective = data.objective;
+  if (data.acceptanceCriteria !== undefined) updateData.acceptanceCriteria = data.acceptanceCriteria;
+  if (data.assigneeAgentId !== undefined) updateData.assigneeAgentId = data.assigneeAgentId;
+  if (data.reviewerAgentId !== undefined) updateData.reviewerAgentId = data.reviewerAgentId;
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: updateData,
+  });
+}
+
+/** 获取项目的任务树 */
+export async function getTaskTree(projectId: string) {
+  const tasks = await prisma.task.findMany({
+    where: { projectId },
+    include: { products: true, subTasks: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  return buildTaskTree(tasks);
+}
+
+function buildTaskTree(tasks: any[]) {
+  const map = new Map<string, any>();
+  const roots: any[] = [];
+  for (const t of tasks) {
+    map.set(t.id, { ...t, children: [] });
+  }
+  for (const t of tasks) {
+    const node = map.get(t.id);
+    if (t.parentTaskId && map.has(t.parentTaskId)) {
+      map.get(t.parentTaskId).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+/** 重设父任务（拖拽/右键操作） */
+export async function reparentTask(taskId: string, data: {
+  parentTaskId?: string | null;
+  newIndex?: number;
+}) {
+  // 检查循环引用
+  if (data.parentTaskId) {
+    let current = data.parentTaskId;
+    while (current) {
+      if (current === taskId) throw new Error('不能将自身设为父任务');
+      const parent = await prisma.task.findUnique({ where: { id: current } });
+      if (!parent) break;
+      current = parent.parentTaskId || '';
+    }
+  }
+
+  const updateData: any = {};
+  // 空字符串转为 null（取消父任务绑定）
+  if (data.parentTaskId !== undefined) {
+    updateData.parentTaskId = data.parentTaskId || null;
+  }
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: updateData,
+  });
+}

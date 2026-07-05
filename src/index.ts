@@ -6,6 +6,7 @@ import agentRoutes from './routes/agents';
 import projectRoutes from './routes/projects';
 import taskRoutes from './routes/tasks';
 import productRoutes from './routes/products';
+import authRoutes from './routes/auth';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,10 +19,12 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.use('/auth', authRoutes);
 app.use('/agents', agentRoutes);
 app.use('/projects', projectRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/products', productRoutes);
+app.use('/auth', authRoutes);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));

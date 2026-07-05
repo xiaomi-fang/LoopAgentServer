@@ -19,13 +19,13 @@
     data_file: 'fa-database'
   };
 
-  function ProductOverview({ onBack }) {
+  function ProductOverview({ onBack, isAdmin }) {
     const [products, setProducts] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchData = () => {
       Promise.all([api.get('/products'), api.get('/tasks'), api.get('/projects')])
         .then(([pr, t, p]) => {
           setProducts(pr.data || []);
@@ -34,7 +34,9 @@
         })
         .catch(() => {})
         .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { fetchData(); }, []);
 
     const getTaskTitle = (taskId) => {
       const t = tasks.find(x => x.id === taskId);
@@ -75,6 +77,7 @@
                   <th className="pb-3">描述</th>
                   <th className="pb-3">关联任务</th>
                   <th className="pb-3">所属项目</th>
+                  {isAdmin && <th className="pb-3">操作</th>}
                 </tr>
               </thead>
               <tbody>
@@ -94,6 +97,21 @@
                     <td className="py-3 text-sm text-gray-600">{prod.description || '-'}</td>
                     <td className="py-3 text-sm text-gray-600">{getTaskTitle(prod.taskId)}</td>
                     <td className="py-3 text-sm text-gray-600">{getProjectName(prod.taskId)}</td>
+                    {isAdmin && (
+                      <td className="py-3">
+                        <button onClick={async () => {
+                          if (!confirm('确定删除此产物？')) return;
+                          try {
+                            await api.delete(`/products/${prod.id}`);
+                            fetchData();
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

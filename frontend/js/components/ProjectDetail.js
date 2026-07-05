@@ -1,18 +1,47 @@
-// 项目详情 - 任务管理 + 产物管理
+// 项目详情 - 审核状态 + 任务树 + 产物管理
 (function() {
   const { useState, useEffect } = React;
   const api = window.LoopAgent.api;
 
-  function ProjectDetail({ projectId, onBack, setMessage }) {
+  const REVIEW_STATUS_MAP = {
+    planning: '规划中',
+    planned: '规划完毕',
+    under_review: '审核中',
+    review_failed: '审核不通过',
+    review_passed: '审核通过',
+    in_development: '研发中',
+    development_paused: '研发暂停',
+    completed: '已完成',
+  };
+  const REVIEW_STATUS_COLORS = {
+    planning: 'bg-gray-100 text-gray-600',
+    planned: 'bg-teal-100 text-teal-700',
+    under_review: 'bg-yellow-100 text-yellow-700',
+    review_failed: 'bg-red-100 text-red-600',
+    review_passed: 'bg-green-100 text-green-600',
+    in_development: 'bg-blue-100 text-blue-600',
+    development_paused: 'bg-orange-100 text-orange-600',
+    completed: 'bg-green-100 text-green-700',
+  };
+
+  // 管理员可选的审核状态
+  const ADMIN_STATUS_OPTIONS = [
+    { value: 'planning', label: '规划中' },
+    { value: 'planned', label: '规划完毕' },
+    { value: 'under_review', label: '审核中' },
+    { value: 'review_failed', label: '审核不通过' },
+    { value: 'review_passed', label: '审核通过' },
+    { value: 'in_development', label: '研发中' },
+    { value: 'development_paused', label: '研发暂停' },
+  ];
+
+  function ProjectDetail({ projectId, onBack, setMessage, isAdmin, onOpenProjectEdit, onOpenTaskEdit }) {
     const [project, setProject] = useState(null);
     const [agents, setAgents] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showTaskForm, setShowTaskForm] = useState(false);
-    const [taskForm, setTaskForm] = useState({ title: '', objective: '', acceptanceCriteria: '', assigneeAgentId: '', reviewerAgentId: '' });
-    const [showProductForm, setShowProductForm] = useState(false);
-    const [productForm, setProductForm] = useState({ taskId: '', productType: 'code_repo', url: '', description: '' });
+    const [activeTab, setActiveTab] = useState('tasks'); // 'tasks' | 'products'
 
     const fetchData = () => {
       setLoading(true);
@@ -33,313 +62,204 @@
 
     useEffect(() => { fetchData(); }, [projectId]);
 
-    // 创建任务（必须指定执行者和审核者）
-    const handleCreateTask = async () => {
-      if (!taskForm.title || !taskForm.assigneeAgentId || !taskForm.reviewerAgentId) {
-        setMessage({ type: 'error', content: '标题、执行者和审核者为必填项' });
-        return;
-      }
+    // 管理员更改项目审核状态
+    const handleStatusChange = async (e) => {
+      const newStatus = e.target.value;
       try {
-        await api.post('/tasks', {
-          project_id: projectId,
-          title: taskForm.title,
-          objective: taskForm.objective,
-          acceptance_criteria: taskForm.acceptanceCriteria,
-          creator_agent_id: project.creatorAgentId,
-          assignee_agent_id: taskForm.assigneeAgentId,
-          reviewer_agent_id: taskForm.reviewerAgentId,
-        });
-        setTaskForm({ title: '', objective: '', acceptanceCriteria: '', assigneeAgentId: '', reviewerAgentId: '' });
-        setShowTaskForm(false);
-        setMessage({ type: 'success', content: `任务「${taskForm.title}」创建成功！` });
+        await api.put(`/projects/${projectId}`, { status: newStatus });
+        setMessage({ type: 'success', content: `项目状态已更新为「${REVIEW_STATUS_MAP[newStatus] || newStatus}」` });
         fetchData();
       } catch (err) {
-        setMessage({ type: 'error', content: '创建任务失败' });
+        setMessage({ type: 'error', content: '更新状态失败' });
       }
     };
 
-    // 认领任务
-    const handleClaim = async (taskId) => {
-      try {
-        await api.post('/tasks/claim', { task_id: taskId, agent_id: project.creatorAgentId });
-        setMessage({ type: 'success', content: '任务已认领' });
-        fetchData();
-      } catch (err) { setMessage({ type: 'error', content: '认领失败' }); }
-    };
-
-    // 提交审核
-    const handleSubmitReview = async (taskId) => {
-      try {
-        await api.patch(`/tasks/${taskId}/status`, { status: 'pending_review', submit_note: '开发完成，提交审核' });
-        setMessage({ type: 'success', content: '已提交审核' });
-        fetchData();
-      } catch (err) { setMessage({ type: 'error', content: '提交审核失败' }); }
-    };
-
-    // 审核通过
-    const handleApprove = async (taskId, reviewerId) => {
-      try {
-        await api.post(`/tasks/${taskId}/review`, { reviewer_id: reviewerId, result: 'pass', comment: '审核通过' });
-        setMessage({ type: 'success', content: '审核通过！' });
-        fetchData();
-      } catch (err) { setMessage({ type: 'error', content: '审核失败' }); }
-    };
-
-    // 发布产物
-    const handlePublishProduct = async () => {
-      if (!productForm.taskId || !productForm.url) return;
-      try {
-        await api.post('/products', {
-          task_id: productForm.taskId,
-          product_type: productForm.productType,
-          url: productForm.url,
-          description: productForm.description,
-        });
-        setProductForm({ taskId: '', productType: 'code_repo', url: '', description: '' });
-        setShowProductForm(false);
-        setMessage({ type: 'success', content: '产物发布成功！' });
-        fetchData();
-      } catch (err) { setMessage({ type: 'error', content: '发布产物失败' }); }
-    };
-
-    const statusMap = { planning: '规划中', in_progress: '进行中', completed: '已完成', paused: '已暂停' };
-    const taskStatusMap = { pending: '待处理', in_progress: '进行中', pending_review: '待审核', completed: '已完成' };
-    const taskStatusColor = { pending: 'border-l-gray-300', in_progress: 'border-l-blue-500', pending_review: 'border-l-amber-500', completed: 'border-l-green-500' };
     const typeMap = { code_repo: '代码仓库', document: '文档', api_definition: 'API 定义', image: '图片', data_file: '数据文件' };
     const typeIcon = { code_repo: 'fa-code', document: 'fa-file-alt', api_definition: 'fa-plug', image: 'fa-image', data_file: 'fa-database' };
 
     if (loading) {
-      return <div className="text-center py-8 text-gray-500">加载中...</div>;
+      return React.createElement('div', { className: 'text-center py-8 text-gray-500' }, '加载中...');
     }
-
     if (!project) {
-      return <div className="text-center py-8 text-red-500">项目不存在</div>;
+      return React.createElement('div', { className: 'text-center py-8 text-red-500' }, '项目不存在');
     }
 
-    const pendingTasks = tasks.filter(t => t.status === 'pending');
-    const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
-    const reviewTasks = tasks.filter(t => t.status === 'pending_review');
-    const completedTasks = tasks.filter(t => t.status === 'completed');
     const creator = agents.find(a => a.id === project.creatorAgentId);
 
-    return (
-      <div>
-        <button onClick={onBack} className="text-sm text-blue-600 hover:text-blue-800 mb-4 flex items-center">
-          <i className="fas fa-arrow-left mr-2"></i> 返回项目列表
-        </button>
-
-        {/* 项目基本信息 */}
-        <div className="card mb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">{project.name}</h2>
-              <p className="text-gray-500 mt-1">{project.description}</p>
-            </div>
-            <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full">{statusMap[project.status] || project.status}</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-sm">
-            <div>
-              <span className="text-gray-400">主智能体：</span>
-              <span className="font-medium">{creator ? creator.name : project.creatorAgentId}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">目标：</span>
-              <span>{project.goal || '未设置'}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">验收标准：</span>
-              <span>{project.acceptanceCriteria || '未设置'}</span>
-            </div>
-            {project.githubUrl && (
-              <div className="col-span-3">
-                <span className="text-gray-400">GitHub 链接：</span>
-                <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {project.githubUrl} <i className="fas fa-external-link-alt text-xs"></i>
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 工具条 */}
-        <div className="flex gap-3 mb-6">
-          <button onClick={() => setShowTaskForm(!showTaskForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm flex items-center">
-            <i className="fas fa-plus-circle mr-2"></i> {showTaskForm ? '取消' : '创建任务'}
-          </button>
-          <button onClick={() => setShowProductForm(!showProductForm)}
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition text-sm flex items-center">
-            <i className="fas fa-box mr-2"></i> {showProductForm ? '取消' : '发布产物'}
-          </button>
-        </div>
-
-        {/* 创建任务表单 */}
-        {showTaskForm && (
-          <div className="card mb-6">
-            <h3 className="text-lg font-semibold mb-4">创建新任务</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input placeholder="任务标题" value={taskForm.title}
-                onChange={e => setTaskForm({...taskForm, title: e.target.value})}
-                className="border rounded px-3 py-2 text-sm col-span-2" />
-              <textarea placeholder="任务目标" value={taskForm.objective} rows={2}
-                onChange={e => setTaskForm({...taskForm, objective: e.target.value})}
-                className="border rounded px-3 py-2 text-sm col-span-2" />
-              <textarea placeholder="验收标准" value={taskForm.acceptanceCriteria} rows={2}
-                onChange={e => setTaskForm({...taskForm, acceptanceCriteria: e.target.value})}
-                className="border rounded px-3 py-2 text-sm col-span-2" />
-              <select value={taskForm.assigneeAgentId} onChange={e => setTaskForm({...taskForm, assigneeAgentId: e.target.value})}
-                className="border rounded px-3 py-2 text-sm">
-                <option value="">选择执行者 *</option>
-                {agents.filter(a => a.status === 'idle').map(a => (
-                  <option key={a.id} value={a.id}>{a.name} ({a.role})</option>
-                ))}
-              </select>
-              <select value={taskForm.reviewerAgentId} onChange={e => setTaskForm({...taskForm, reviewerAgentId: e.target.value})}
-                className="border rounded px-3 py-2 text-sm">
-                <option value="">选择审核者 *</option>
-                {agents.map(a => (
-                  <option key={a.id} value={a.id}>{a.name} ({a.role})</option>
-                ))}
-              </select>
-              <button onClick={handleCreateTask}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm col-span-2">
-                确认创建
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 发布产物表单 */}
-        {showProductForm && (
-          <div className="card mb-6">
-            <h3 className="text-lg font-semibold mb-4">发布新产物</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select value={productForm.taskId} onChange={e => setProductForm({...productForm, taskId: e.target.value})}
-                className="border rounded px-3 py-2 text-sm">
-                <option value="">选择关联任务</option>
-                {tasks.filter(t => t.status === 'completed').map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
-              <select value={productForm.productType} onChange={e => setProductForm({...productForm, productType: e.target.value})}
-                className="border rounded px-3 py-2 text-sm">
-                <option value="code_repo">代码仓库</option>
-                <option value="document">文档</option>
-                <option value="api_definition">API 定义</option>
-                <option value="image">图片</option>
-                <option value="data_file">数据文件</option>
-              </select>
-              <input placeholder="下载链接/URL" value={productForm.url}
-                onChange={e => setProductForm({...productForm, url: e.target.value})}
-                className="border rounded px-3 py-2 text-sm col-span-2" />
-              <input placeholder="产物描述" value={productForm.description}
-                onChange={e => setProductForm({...productForm, description: e.target.value})}
-                className="border rounded px-3 py-2 text-sm col-span-2" />
-              <button onClick={handlePublishProduct}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm col-span-2">
-                确认发布
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 任务看板 */}
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">任务看板（{tasks.length}）</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { key: 'pending', label: '📋 待处理', tasks: pendingTasks },
-            { key: 'in_progress', label: '🔧 进行中', tasks: inProgressTasks },
-            { key: 'pending_review', label: '👀 待审核', tasks: reviewTasks },
-            { key: 'completed', label: '✅ 已完成', tasks: completedTasks },
-          ].map(col => (
-            <div key={col.key}>
-              <h4 className="font-semibold text-gray-700 mb-3 text-sm bg-gray-200 rounded px-3 py-2">
-                {col.label}（{col.tasks.length}）
-              </h4>
-              <div className="space-y-3">
-                {col.tasks.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400 text-sm border rounded bg-white">空</div>
-                ) : col.tasks.map(task => {
-                  const taskProducts = products.filter(p => p.taskId === task.id);
-                  return (
-                    <div key={task.id} className={`card p-3 border-l-4 ${taskStatusColor[task.status] || ''}`}>
-                      <div className="font-medium text-sm mb-1">{task.title}</div>
-                      <div className="text-xs text-gray-500 mb-2">{task.objective}</div>
-                      <div className="text-xs text-gray-400 mb-1">
-                        执行：{agents.find(a => a.id === task.assigneeAgentId)?.name || task.assigneeAgentId || '-'}
-                      </div>
-                      {taskProducts.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {taskProducts.map(prod => (
-                            <a key={prod.id} href={prod.url} target="_blank" rel="noopener noreferrer"
-                              className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded hover:bg-purple-100">
-                              <i className={`fas ${typeIcon[prod.productType] || 'fa-file'} mr-1`}></i>
-                              {typeMap[prod.productType] || prod.productType}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-2 mt-2">
-                        {task.status === 'pending' && (
-                          <button onClick={() => handleClaim(task.id)}
-                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
-                            认领
-                          </button>
-                        )}
-                        {task.status === 'in_progress' && (
-                          <button onClick={() => handleSubmitReview(task.id)}
-                            className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">
-                            提交审核
-                          </button>
-                        )}
-                        {task.status === 'pending_review' && (
-                          <button onClick={() => handleApprove(task.id, task.reviewerAgentId)}
-                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">
-                            通过
-                          </button>
-                        )}
-                      </div>
-                    </div>
+    // 产品列表表格
+    const renderProductTable = () => {
+      const projectProducts = products.filter(p => tasks.some(t => t.id === p.taskId));
+      return React.createElement('div', { className: 'card' },
+        React.createElement('table', { className: 'w-full text-left text-sm' },
+          React.createElement('thead', null,
+            React.createElement('tr', { className: 'border-b text-gray-500' },
+              React.createElement('th', { className: 'pb-3' }, '类型'),
+              React.createElement('th', { className: 'pb-3' }, 'URL'),
+              React.createElement('th', { className: 'pb-3' }, '描述'),
+              React.createElement('th', { className: 'pb-3' }, '关联任务'),
+              isAdmin && React.createElement('th', { className: 'pb-3' }, '操作'),
+            ),
+          ),
+          React.createElement('tbody', null,
+            projectProducts.length === 0
+              ? React.createElement('tr', null,
+                  React.createElement('td', { colSpan: isAdmin ? 5 : 4, className: 'py-6 text-center text-gray-400' }, '暂无产物')
+                )
+              : projectProducts.map(prod => {
+                  const taskTitle = tasks.find(t => t.id === prod.taskId)?.title || prod.taskId;
+                  return React.createElement('tr', { key: prod.id, className: 'border-b last:border-0 hover:bg-gray-50' },
+                    React.createElement('td', { className: 'py-3' },
+                      React.createElement('span', { className: 'bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded' },
+                        React.createElement('i', { className: `fas ${typeIcon[prod.productType] || 'fa-file'} mr-1` }),
+                        typeMap[prod.productType] || prod.productType,
+                      ),
+                    ),
+                    React.createElement('td', { className: 'py-3 text-blue-600' },
+                      React.createElement('a', { href: prod.url, target: '_blank', className: 'hover:underline break-all' }, prod.url),
+                    ),
+                    React.createElement('td', { className: 'py-3 text-gray-600' }, prod.description || '-'),
+                    React.createElement('td', { className: 'py-3 text-gray-600' }, taskTitle),
+                    isAdmin && React.createElement('td', { className: 'py-3' },
+                      React.createElement('button', {
+                        onClick: async () => {
+                          if (!confirm('确定删除此产物？')) return;
+                          try {
+                            await api.delete(`/products/${prod.id}`);
+                            setMessage({ type: 'success', content: '产物已删除' });
+                            fetchData();
+                          } catch (err) {
+                            setMessage({ type: 'error', content: '删除失败' });
+                          }
+                        },
+                        className: 'text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200',
+                      }, React.createElement('i', { className: 'fas fa-trash-alt' })),
+                    ),
                   );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+                }),
+          ),
+        ),
+      );
+    };
 
-        {/* 产物列表 */}
-        {(products.filter(p => tasks.some(t => t.id === p.taskId)).length > 0) && (
-          <>
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">项目产物</h3>
-            <div className="card">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b text-gray-500 text-sm">
-                    <th className="pb-3">类型</th><th className="pb-3">URL</th><th className="pb-3">描述</th><th className="pb-3">关联任务</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.filter(p => tasks.some(t => t.id === p.taskId)).map(prod => (
-                    <tr key={prod.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-3">
-                        <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-                          <i className={`fas ${typeIcon[prod.productType] || 'fa-file'} mr-1`}></i>
-                          {typeMap[prod.productType] || prod.productType}
-                        </span>
-                      </td>
-                      <td className="py-3 text-sm text-blue-600">
-                        <a href={prod.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{prod.url}</a>
-                      </td>
-                      <td className="py-3 text-sm text-gray-600">{prod.description || '-'}</td>
-                      <td className="py-3 text-sm">{tasks.find(t => t.id === prod.taskId)?.title || prod.taskId}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
+    return React.createElement('div', { className: 'space-y-6' },
+      /* 返回按钮 */
+      React.createElement('button', {
+        onClick: onBack,
+        className: 'text-sm text-blue-600 hover:text-blue-800 flex items-center',
+      },
+        React.createElement('i', { className: 'fas fa-arrow-left mr-2' }),
+        '返回项目列表'
+      ),
+
+      /* 项目信息头 */
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { className: 'flex flex-col sm:flex-row sm:items-start justify-between gap-3' },
+          React.createElement('div', { className: 'flex-1' },
+            React.createElement('h2', { className: 'text-xl sm:text-2xl font-bold text-gray-800' }, project.name),
+            React.createElement('p', { className: 'text-gray-500 mt-1 text-sm' }, project.description),
+          ),
+          React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
+            isAdmin
+              ? React.createElement('select', {
+                  value: project.status,
+                  onChange: handleStatusChange,
+                  className: `text-xs px-2 py-1 rounded border ${REVIEW_STATUS_COLORS[project.status] || 'bg-gray-100'} cursor-pointer`,
+                },
+                  ADMIN_STATUS_OPTIONS.map(opt =>
+                    React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                  ),
+                )
+              : React.createElement('span', {
+                  className: `text-xs px-3 py-1 rounded-full ${REVIEW_STATUS_COLORS[project.status] || 'bg-gray-100'}`,
+                }, REVIEW_STATUS_MAP[project.status] || project.status),
+            isAdmin && React.createElement('button', {
+              onClick: () => onOpenProjectEdit && onOpenProjectEdit('edit', projectId),
+              className: 'text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 mr-1',
+            }, React.createElement('i', { className: 'fas fa-edit mr-1' }), '编辑'),
+            isAdmin && React.createElement('button', {
+              onClick: async () => {
+                if (!confirm(`确定删除项目「${project.name}」及其所有任务、产物？`)) return;
+                try {
+                  await api.delete(`/projects/${project.id}`);
+                  setMessage({ type: 'success', content: '项目已删除' });
+                  onBack();
+                } catch (err) {
+                  setMessage({ type: 'error', content: '删除失败' });
+                }
+              },
+              className: 'text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200',
+            }, React.createElement('i', { className: 'fas fa-trash-alt mr-1' }), '删除'),
+          ),
+        ),
+        React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-sm' },
+          React.createElement('div', null,
+            React.createElement('span', { className: 'text-gray-400' }, '主智能体：'),
+            React.createElement('span', { className: 'font-medium ml-1' }, creator ? creator.name : project.creatorAgentId),
+          ),
+          React.createElement('div', null,
+            React.createElement('span', { className: 'text-gray-400' }, '目标：'),
+            React.createElement('span', { className: 'ml-1' }, project.goal || '未设置'),
+          ),
+          React.createElement('div', null,
+            React.createElement('span', { className: 'text-gray-400' }, '验收标准：'),
+            React.createElement('span', { className: 'ml-1' }, project.acceptanceCriteria || '未设置'),
+          ),
+          project.githubUrl && React.createElement('div', { className: 'sm:col-span-3' },
+            React.createElement('span', { className: 'text-gray-400' }, 'GitHub：'),
+            React.createElement('a', { href: project.githubUrl, target: '_blank', className: 'text-blue-600 hover:underline ml-1' },
+              project.githubUrl, React.createElement('i', { className: 'fas fa-external-link-alt text-xs ml-1' }),
+            ),
+          ),
+        ),
+      ),
+
+      /* Tab 切换 */
+      React.createElement('div', { className: 'flex border-b gap-0' },
+        [
+          { key: 'tasks', label: '任务树', icon: 'fa-sitemap' },
+          { key: 'products', label: '产物', icon: 'fa-box' },
+        ].map(tab =>
+          React.createElement('button', {
+            key: tab.key,
+            onClick: () => setActiveTab(tab.key),
+            className: `px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === tab.key
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`,
+          },
+            React.createElement('i', { className: `fas ${tab.icon} mr-2` }),
+            tab.label,
+          ),
+        ),
+      ),
+
+      /* 任务树面板 */
+      activeTab === 'tasks' && React.createElement('div', null,
+        React.createElement(window.LoopAgent.TaskTree, {
+          projectId,
+          creatorAgentId: project.creatorAgentId,
+          agents,
+          products,
+          setMessage,
+          isAdmin,
+          onEditTask: onOpenTaskEdit,
+        }),
+      ),
+
+      /* 产物面板 */
+      activeTab === 'products' && React.createElement('div', null,
+        React.createElement('div', { className: 'flex justify-end mb-3' },
+          React.createElement('button', {
+            onClick: () => setMessage({ type: 'info', content: '产物需在任务完成后通过任务发布' }),
+            className: 'text-sm text-blue-600 hover:text-blue-800',
+          },
+            React.createElement('i', { className: 'fas fa-info-circle mr-1' }),
+            '发布新产物需在任务完成后操作'
+          ),
+        ),
+        renderProductTable(),
+      ),
     );
   }
 

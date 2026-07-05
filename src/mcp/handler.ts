@@ -260,12 +260,43 @@ register('get_review_records_by_task', async (args) => {
   return { content: [{ type: 'text', text: JSON.stringify(records) }] };
 });
 
-register('update_review_record_status', async (args) => {
-  const record = await reviewRecordService.updateReviewRecordStatus(
-    args.record_id as string,
-    args.status as string,
-  );
-  return { content: [{ type: 'text', text: JSON.stringify(record) }] };
+register('review_review_record', async (args) => {
+  const record = await reviewRecordService.getReviewRecordById(args.record_id as string);
+  if (!record) {
+    return { content: [{ type: 'text', text: '审核记录不存在' }], isError: true };
+  }
+  if (record.reviewerId !== args.reviewer_id) {
+    return { content: [{ type: 'text', text: '只有该审核记录的审核者才能操作' }], isError: true };
+  }
+  if (record.status !== 'in_review' && record.status !== 're_requested') {
+    return { content: [{ type: 'text', text: `当前状态 ${record.status} 不允许审核操作` }], isError: true };
+  }
+  const result = args.result as string;
+  if (result !== 'approved' && result !== 'rejected') {
+    return { content: [{ type: 'text', text: 'result 必须为 approved 或 rejected' }], isError: true };
+  }
+  const updated = await reviewRecordService.updateReviewRecordStatus(args.record_id as string, result);
+  return { content: [{ type: 'text', text: JSON.stringify(updated) }] };
+});
+
+register('re_request_review_record', async (args) => {
+  const record = await reviewRecordService.getReviewRecordById(args.record_id as string);
+  if (!record) {
+    return { content: [{ type: 'text', text: '审核记录不存在' }], isError: true };
+  }
+  // 通过 taskService 获取任务验证执行者
+  const task = await taskService.getTaskById(record.taskId);
+  if (!task) {
+    return { content: [{ type: 'text', text: '关联任务不存在' }], isError: true };
+  }
+  if (task.assigneeAgentId !== args.assignee_id) {
+    return { content: [{ type: 'text', text: '只有任务的执行者才能重新请求审核' }], isError: true };
+  }
+  if (record.status !== 'rejected') {
+    return { content: [{ type: 'text', text: '仅当审核未通过时才能重新请求审核' }], isError: true };
+  }
+  const updated = await reviewRecordService.updateReviewRecordStatus(args.record_id as string, 're_requested');
+  return { content: [{ type: 'text', text: JSON.stringify(updated) }] };
 });
 
 // ── 导出 ──────────────────────────────────────────────────

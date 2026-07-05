@@ -16,6 +16,10 @@ export async function createReviewRecord(data: {
   });
 }
 
+export async function getReviewRecordById(recordId: string) {
+  return prisma.reviewRecord.findUnique({ where: { id: recordId } });
+}
+
 export async function getReviewRecordsByTask(taskId: string) {
   return prisma.reviewRecord.findMany({
     where: { taskId },

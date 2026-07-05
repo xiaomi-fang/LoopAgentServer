@@ -55,12 +55,21 @@
       }
     };
 
-    const handleStatusUpdate = async (recordId, newStatus) => {
+    const handleStatusUpdate = async (recordId, newStatus, reviewerId) => {
       try {
-        await api.request(`/review-records/${recordId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: newStatus }),
-        });
+        if (newStatus === 're_requested') {
+          // 执行者重新请求审核
+          await api.request(`/review-records/${recordId}/re-request`, {
+            method: 'PATCH',
+            body: JSON.stringify({ assignee_id: reviewerId }),
+          });
+        } else {
+          // 审核者通过/驳回
+          await api.request(`/review-records/${recordId}/review`, {
+            method: 'PATCH',
+            body: JSON.stringify({ reviewer_id: reviewerId, result: newStatus }),
+          });
+        }
         setMessage({ type: 'success', content: `状态已更新为「${STATUS_LABELS[newStatus] || newStatus}」` });
         fetchRecords();
       } catch (err) {
@@ -152,23 +161,23 @@
                       React.createElement('td', { className: 'py-2 text-gray-500' }, new Date(record.createdAt).toLocaleDateString()),
                       isAdmin && React.createElement('td', { className: 'py-2' },
                         record.status === 'rejected' && React.createElement('button', {
-                          onClick: () => handleStatusUpdate(record.id, 're_requested'),
+                          onClick: () => handleStatusUpdate(record.id, 're_requested', record.reviewerId),
                           className: 'text-amber-600 hover:text-amber-800 mr-2',
                           title: '标记为重新请求审核',
                         }, '重新请求'),
                         record.status === 're_requested' && React.createElement('button', {
-                          onClick: () => handleStatusUpdate(record.id, 'in_review'),
+                          onClick: () => handleStatusUpdate(record.id, 'in_review', record.reviewerId),
                           className: 'text-blue-600 hover:text-blue-800 mr-2',
                           title: '标记为审核中',
                         }, '重新审核'),
-                        record.status === 'in_review' && React.createElement(React.Fragment, null,
+                        (record.status === 'in_review' || record.status === 're_requested') && React.createElement(React.Fragment, null,
                           React.createElement('button', {
-                            onClick: () => handleStatusUpdate(record.id, 'approved'),
+                            onClick: () => handleStatusUpdate(record.id, 'approved', record.reviewerId),
                             className: 'text-green-600 hover:text-green-800 mr-2',
                             title: '审核通过',
                           }, '通过'),
                           React.createElement('button', {
-                            onClick: () => handleStatusUpdate(record.id, 'rejected'),
+                            onClick: () => handleStatusUpdate(record.id, 'rejected', record.reviewerId),
                             className: 'text-red-600 hover:text-red-800',
                             title: '审核未通过',
                           }, '驳回'),

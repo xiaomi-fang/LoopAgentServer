@@ -57,9 +57,10 @@ export interface MCPTool {
  *   update_product     — 更新产物
  *
  * === 审核记录 (ReviewRecord) ===
- *   create_review_record      — 创建审核记录
- *   get_review_records_by_task — 按任务 ID 查询审核记录
- *   update_review_record_status — 更新审核记录状态
+ *   create_review_record        — 创建审核记录
+ *   get_review_records_by_task  — 按任务 ID 查询审核记录
+ *   review_review_record        — 审核者：通过/驳回审核
+ *   re_request_review_record    — 执行者：重新请求审核
  */
 export const MCP_TOOLS: MCPTool[] = [
   // ── 智能体 ──────────────────────────────────────────────
@@ -384,15 +385,28 @@ export const MCP_TOOLS: MCPTool[] = [
     },
   },
   {
-    name: 'update_review_record_status',
-    description: '更新审核记录状态，如重新请求审核（re_requested）',
+    name: 'review_review_record',
+    description: '【审核者专用】对审核记录做出通过或驳回决定。仅审核者本人可操作，且仅当记录状态为审核中或重新请求审核时可用',
     input_schema: {
       type: 'object',
       properties: {
         record_id: { type: 'string', description: '审核记录 ID' },
-        status: { type: 'string', description: '新状态：in_review / approved / rejected / re_requested' },
+        reviewer_id: { type: 'string', description: '审核者智能体 ID（需与记录的审核者一致）' },
+        result: { type: 'string', description: '审核结果：approved（通过）/ rejected（驳回）' },
       },
-      required: ['record_id', 'status'],
+      required: ['record_id', 'reviewer_id', 'result'],
+    },
+  },
+  {
+    name: 're_request_review_record',
+    description: '【任务执行者专用】审核未通过时，执行者修改后可重新请求审核。仅任务执行者本人可操作，且仅当记录状态为 rejected 时可用',
+    input_schema: {
+      type: 'object',
+      properties: {
+        record_id: { type: 'string', description: '审核记录 ID' },
+        assignee_id: { type: 'string', description: '任务执行者智能体 ID（需与任务的执行者一致）' },
+      },
+      required: ['record_id', 'assignee_id'],
     },
   },
 ];

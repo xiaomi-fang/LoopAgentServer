@@ -7,6 +7,7 @@ import projectRoutes from './routes/projects';
 import taskRoutes from './routes/tasks';
 import productRoutes from './routes/products';
 import authRoutes from './routes/auth';
+import mcpRoutes from './routes/mcp';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,7 +25,11 @@ app.use('/agents', agentRoutes);
 app.use('/projects', projectRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/products', productRoutes);
-app.use('/auth', authRoutes);
+
+// MCP (Model Context Protocol) 标准接口
+// POST /mcp/v1/tools    — 列出所有工具
+// POST /mcp/v1/execute  — 执行指定工具
+app.use('/mcp', mcpRoutes);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -81,9 +86,12 @@ if (require.main === module) {
     setInterval(disasterRecovery, DISASTER_CHECK_INTERVAL_MS);
 
     app.listen(PORT, () => {
-      console.log(`[LoopAgent] MCP Server running on http://localhost:${PORT}`);
-      console.log(`[LoopAgent] Heartbeat timeout: ${HEARTBEAT_TIMEOUT_MINUTES} min`);
-      console.log(`[LoopAgent] Disaster check interval: ${DISASTER_CHECK_INTERVAL_MS / 1000}s`);
+      console.log(`[环枢] Server running on http://localhost:${PORT}`);
+      console.log(`[环枢] REST API   → /agents, /projects, /tasks, /products, /auth`);
+      console.log(`[环枢] MCP API    → POST /mcp/v1/tools, POST /mcp/v1/execute`);
+      console.log(`[环枢] Frontend   → http://localhost:${PORT}`);
+      console.log(`[环枢] Heartbeat timeout: ${HEARTBEAT_TIMEOUT_MINUTES} min`);
+      console.log(`[环枢] Disaster check interval: ${DISASTER_CHECK_INTERVAL_MS / 1000}s`);
     });
   }
 

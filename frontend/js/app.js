@@ -253,16 +253,27 @@
       ),
 
       /* 移动端顶部导航栏 */
-      React.createElement('div', { className: 'lg:hidden fixed top-0 left-0 right-0 z-30 bg-gray-800 text-white flex items-center justify-between px-4 h-12' },
+      React.createElement('div', { className: 'lg:hidden fixed top-0 left-0 right-0 z-30 bg-gray-800 text-white flex items-center justify-between px-3 h-12' },
         React.createElement('button', {
           onClick: () => setSidebarOpen(!sidebarOpen),
-          className: 'text-white text-lg',
+          className: 'text-white text-lg w-8 h-8 flex items-center justify-center',
         }, React.createElement('i', { className: `fas ${sidebarOpen ? 'fa-times' : 'fa-bars'}` })),
-        React.createElement('span', { className: 'font-bold flex items-center' },
-          React.createElement('i', { className: 'fas fa-sync-alt mr-2 text-blue-400' }),
-          'LoopAgent',
+        /* 后退/前进按钮（移动端） */
+        React.createElement('div', { className: 'flex items-center gap-1' },
+          React.createElement('button', {
+            onClick: showBackBtn ? goBack : undefined,
+            disabled: !showBackBtn,
+            className: 'w-8 h-8 flex items-center justify-center rounded transition ' +
+              (showBackBtn ? 'text-white opacity-70 hover:opacity-100' : 'text-gray-500 opacity-40'),
+          }, React.createElement('i', { className: 'fas fa-arrow-left' })),
+          React.createElement('button', {
+            onClick: showForwardBtn ? goForward : undefined,
+            disabled: !showForwardBtn,
+            className: 'w-8 h-8 flex items-center justify-center rounded transition ' +
+              (showForwardBtn ? 'text-white opacity-70 hover:opacity-100' : 'text-gray-500 opacity-40'),
+          }, React.createElement('i', { className: 'fas fa-arrow-right' })),
         ),
-        React.createElement('div', { className: 'w-6' }), // spacer
+        React.createElement('span', { className: 'font-bold text-sm' }, 'LoopAgent'),
       ),
 
       /* 侧边栏遮罩 */
@@ -323,8 +334,8 @@
       React.createElement('div', {
         className: 'flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8',
       },
-        /* 历史导航按钮（← →） */
-        React.createElement('div', { className: 'flex items-center gap-1 mb-4' },
+        /* 历史导航按钮（← →） — 仅桌面端显示，移动端在顶部栏 */
+        React.createElement('div', { className: 'hidden lg:flex items-center gap-1 mb-4' },
           /* 后退按钮 */
           React.createElement('button', {
             onClick: showBackBtn ? goBack : undefined,

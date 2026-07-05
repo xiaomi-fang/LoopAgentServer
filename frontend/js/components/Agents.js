@@ -62,8 +62,8 @@
 
     return (
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">🤖 智能体管理</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">🤖 智能体管理</h1>
           <button onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm">
             {showForm ? '✕ 取消' : '✚ 注册新智能体'}
@@ -94,97 +94,126 @@
         {loading ? (
           <div className="text-center py-8 text-gray-500">加载中...</div>
         ) : (
-          <div className="card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-gray-600">
-                  <th className="py-3 text-left">名称</th>
-                  <th className="py-3 text-left">角色</th>
-                  <th className="py-3 text-left">能力</th>
-                  <th className="py-3 text-left">状态</th>
-                  <th className="py-3 text-left">在线状态</th>
-                  <th className="py-3 text-left">最近参与项目</th>
-                  <th className="py-3 text-left">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agents.map(agent => {
-                  const online = isOnline(agent);
-                  const agentProjects = getAgentProjects(agent.id);
-                  return (
-                    <tr key={agent.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 font-medium">{agent.name}</td>
-                      <td className="py-3 text-gray-600">{agent.role}</td>
-                      <td className="py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {(agent.capabilities || []).map((cap, i) => (
-                            <span key={i} className="badge bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-                              {cap}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          agent.status === 'idle' ? 'bg-green-100 text-green-700' :
-                          agent.status === 'busy' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {statusLabel[agent.status] || agent.status}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <span className={`flex items-center gap-1 text-xs ${
-                          online ? 'text-green-600' : 'text-gray-400'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full inline-block ${
-                            online ? 'bg-green-500' : 'bg-gray-300'
-                          }`}></span>
-                          {online ? '在线' : '离线'}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {agentProjects.length === 0 ? (
-                            <span className="text-gray-400 text-xs">无</span>
-                          ) : (
-                            agentProjects.map(p => (
-                              <span key={p.id} className="badge bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
-                                {p.name}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => onOpenAgentDetail(agent.id)}
-                            className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">
-                            查看详情
-                          </button>
-                          {isAdmin && (
-                            <>
+          <div>
+            {/* 桌面端：表格布局 */}
+            <div className="hidden md:block card overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-gray-600">
+                    <th className="py-3 text-left">名称</th>
+                    <th className="py-3 text-left">角色</th>
+                    <th className="py-3 text-left">能力</th>
+                    <th className="py-3 text-left">状态</th>
+                    <th className="py-3 text-left">在线状态</th>
+                    <th className="py-3 text-left">最近参与项目</th>
+                    <th className="py-3 text-left">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agents.map(agent => {
+                    const online = isOnline(agent);
+                    const agentProjects = getAgentProjects(agent.id);
+                    return (
+                      <tr key={agent.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 font-medium">{agent.name}</td>
+                        <td className="py-3 text-gray-600">{agent.role}</td>
+                        <td className="py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {(agent.capabilities || []).map((cap, i) => (
+                              <span key={i} className="badge bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">{cap}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            agent.status === 'idle' ? 'bg-green-100 text-green-700' :
+                            agent.status === 'busy' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>{statusLabel[agent.status] || agent.status}</span>
+                        </td>
+                        <td className="py-3">
+                          <span className={`flex items-center gap-1 text-xs ${online ? 'text-green-600' : 'text-gray-400'}`}>
+                            <span className={`w-2 h-2 rounded-full inline-block ${online ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                            {online ? '在线' : '离线'}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {agentProjects.length === 0 ? <span className="text-gray-400 text-xs">无</span> :
+                              agentProjects.map(p => (
+                                <span key={p.id} className="badge bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">{p.name}</span>
+                              ))}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => onOpenAgentDetail(agent.id)}
+                              className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">查看详情</button>
+                            {isAdmin && (
                               <button onClick={async () => {
                                 if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
-                                try {
-                                  await api.delete(`/agents/${agent.id}`);
-                                  setMessage({ type: 'success', content: `智能体「${agent.name}」已删除` });
-                                  fetchData();
-                                } catch (err) {
-                                  setMessage({ type: 'error', content: '删除失败：' + err.message });
-                                }
+                                try { await api.delete(`/agents/${agent.id}`); setMessage({ type: 'success', content: `已删除` }); fetchData(); }
+                                catch (err) { setMessage({ type: 'error', content: '删除失败' }); }
                               }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">
                                 <i className="fas fa-trash-alt mr-1"></i>删除
                               </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* 移动端：卡片布局 */}
+            <div className="md:hidden space-y-3">
+              {agents.map(agent => {
+                const online = isOnline(agent);
+                const agentProjects = getAgentProjects(agent.id);
+                return (
+                  <div key={agent.id} className="card" onClick={() => onOpenAgentDetail(agent.id)}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${online ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <h3 className="font-semibold text-gray-800 truncate">{agent.name}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${
+                          agent.status === 'idle' ? 'bg-green-100 text-green-700' :
+                          agent.status === 'busy' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>{statusLabel[agent.status] || agent.status}</span>
+                      </div>
+                      {isAdmin && (
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm(`确定删除「${agent.name}」？`)) return;
+                          try { await api.delete(`/agents/${agent.id}`); setMessage({ type: 'success', content: '已删除' }); fetchData(); }
+                          catch (err) { setMessage({ type: 'error', content: '删除失败' }); }
+                        }} className="text-red-400 hover:text-red-600 px-2 py-1 text-sm flex-shrink-0">
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">{agent.role}</p>
+                    {agent.capabilities && agent.capabilities.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mb-2">
+                        {agent.capabilities.slice(0, 4).map((cap, i) => (
+                          <span key={i} className="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded">{cap}</span>
+                        ))}
+                        {agent.capabilities.length > 4 && <span className="text-gray-400 text-xs">+{agent.capabilities.length - 4}</span>}
+                      </div>
+                    )}
+                    {agentProjects.length > 0 && (
+                      <div className="flex gap-1 flex-wrap">
+                        {agentProjects.slice(0, 2).map(p => (
+                          <span key={p.id} className="bg-blue-50 text-blue-600 text-xs px-1.5 py-0.5 rounded">{p.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

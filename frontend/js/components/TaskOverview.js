@@ -61,7 +61,7 @@
           <i className="fas fa-arrow-left mr-2"></i> 返回仪表盘
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
           📋 {statusLabel}任务列表（{tasks.length}）
         </h1>
 
@@ -73,35 +73,56 @@
             <p className="text-gray-500">暂无{statusLabel}任务</p>
           </div>
         ) : (
-          <div className="card overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b text-gray-500 text-sm">
-                  <th className="pb-3 pl-2">标题</th>
-                  <th className="pb-3">所属项目</th>
-                  <th className="pb-3">状态</th>
-                  <th className="pb-3">执行人</th>
-                  <th className="pb-3">审核人</th>
-                  <th className="pb-3">创建时间</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map(task => (
-                  <tr key={task.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="py-3 pl-2 font-medium text-sm">{task.title}</td>
-                    <td className="py-3 text-sm text-gray-600">{getProjectName(task.projectId)}</td>
-                    <td className="py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[task.status] || 'bg-gray-100'}`}>
-                        {STATUS_LABELS[task.status] || task.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-sm text-gray-600">{task.assigneeAgentId ? getAgentName(task.assigneeAgentId) : '-'}</td>
-                    <td className="py-3 text-sm text-gray-600">{task.reviewerAgentId ? getAgentName(task.reviewerAgentId) : '-'}</td>
-                    <td className="py-3 text-sm text-gray-400">{new Date(task.createdAt).toLocaleString('zh-CN')}</td>
+          <div>
+            {/* 桌面端表格 */}
+            <div className="hidden md:block card overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b text-gray-500 text-sm">
+                    <th className="pb-3 pl-2">标题</th>
+                    <th className="pb-3">所属项目</th>
+                    <th className="pb-3">状态</th>
+                    <th className="pb-3">执行人</th>
+                    <th className="pb-3">审核人</th>
+                    <th className="pb-3">创建时间</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tasks.map(task => (
+                    <tr key={task.id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="py-3 pl-2 font-medium text-sm">{task.title}</td>
+                      <td className="py-3 text-sm text-gray-600">{getProjectName(task.projectId)}</td>
+                      <td className="py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[task.status] || 'bg-gray-100'}`}>
+                          {STATUS_LABELS[task.status] || task.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-sm text-gray-600">{task.assigneeAgentId ? getAgentName(task.assigneeAgentId) : '-'}</td>
+                      <td className="py-3 text-sm text-gray-600">{task.reviewerAgentId ? getAgentName(task.reviewerAgentId) : '-'}</td>
+                      <td className="py-3 text-sm text-gray-400">{new Date(task.createdAt).toLocaleString('zh-CN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* 移动端卡片 */}
+            <div className="md:hidden space-y-3">
+              {tasks.map(task => (
+                <div key={task.id} className="card">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-medium text-sm text-gray-800 truncate mr-2">{task.title}</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${STATUS_COLORS[task.status] || 'bg-gray-100'}`}>
+                      {STATUS_LABELS[task.status] || task.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{getProjectName(task.projectId)}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{task.assigneeAgentId ? `执行：${getAgentName(task.assigneeAgentId)}` : ''}</span>
+                    <span>{new Date(task.createdAt).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

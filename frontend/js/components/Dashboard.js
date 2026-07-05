@@ -39,19 +39,19 @@
 
     return (
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">仪表盘总览</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">仪表盘总览</h1>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {cards.map((card, i) => (
             <div key={i}
               onClick={card.onClick}
-              className="card flex items-center p-6 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="card flex items-center p-3 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              <div className={`${card.color} w-14 h-14 rounded-lg flex items-center justify-center mr-4`}>
-                <i className={`fas ${card.icon} text-white text-xl`}></i>
+              <div className={`${card.color} w-10 h-10 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0`}>
+                <i className={`fas ${card.icon} text-white text-base sm:text-xl`}></i>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">{card.label}</p>
-                <p className="text-3xl font-bold text-gray-800">{card.value}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-500">{card.label}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{card.value}</p>
               </div>
             </div>
           ))}

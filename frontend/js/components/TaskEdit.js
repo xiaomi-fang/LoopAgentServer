@@ -73,34 +73,34 @@
     return (
       <div className="fixed inset-0 z-40 flex flex-col bg-gray-50">
         {/* 顶栏 */}
-        <div className="bg-white border-b px-8 py-4 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
+        <div className="bg-white border-b px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => onClose(false)}
-              className="text-gray-400 hover:text-gray-600 transition text-xl">
+              className="text-gray-400 hover:text-gray-600 transition text-lg sm:text-xl p-1">
               <i className="fas fa-times"></i>
             </button>
-            <h2 className="text-xl font-bold text-gray-800">
-              <i className={`fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'} mr-2 text-indigo-500`}></i>
+            <h2 className="text-base sm:text-xl font-bold text-gray-800">
+              <i className={`fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'} mr-1 sm:mr-2 text-indigo-500`}></i>
               {isEdit ? '编辑任务' : '新建任务'}
             </h2>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button onClick={() => onClose(false)}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded transition">
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 border rounded transition">
               取消
             </button>
             <button onClick={handleSave} disabled={saving}
-              className="px-6 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded transition disabled:opacity-50 flex items-center gap-2">
-              {saving ? <><i className="fas fa-spinner fa-spin"></i>保存中...</> : <><i className="fas fa-save"></i>保存</>}
+              className="px-4 sm:px-6 py-2 text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded transition disabled:opacity-50 flex items-center gap-1 sm:gap-2">
+              {saving ? <><i className="fas fa-spinner fa-spin"></i><span className="hidden sm:inline">保存中...</span></> : <><i className="fas fa-save"></i><span className="hidden sm:inline">保存</span></>}
             </button>
           </div>
         </div>
 
         {/* 编辑区 */}
         <div className="flex-1 overflow-auto">
-          <div className="max-w-3xl mx-auto p-8">
-            <div className="bg-white rounded-xl shadow-sm border p-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-6 flex items-center gap-2">
+          <div className="max-w-3xl mx-auto p-4 sm:p-8">
+            <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-8">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-4 sm:mb-6 flex items-center gap-2">
                 <i className="fas fa-tasks text-indigo-400"></i>任务信息
               </h3>
 

@@ -44,8 +44,8 @@
 
     return (
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
             <i className="fas fa-folder mr-2 text-gray-400"></i>项目管理
           </h1>
           <button onClick={() => onOpenProjectEdit && onOpenProjectEdit('create', null)}
@@ -100,14 +100,14 @@
                   {isAdmin && (
                     <div className="mt-3 pt-3 border-t flex justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <button onClick={() => onOpenProjectEdit && onOpenProjectEdit('edit', project.id)}
-                        className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200">
+                        className="text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-200 flex items-center">
                         <i className="fas fa-edit mr-1"></i>编辑
                       </button>
                       <button onClick={async (e) => {
                         if (!confirm(`确定删除项目「${project.name}」？`)) return;
                         try { await api.delete(`/projects/${project.id}`); setMessage({ type: 'success', content: '项目已删除' }); fetchData(); }
                         catch (err) { setMessage({ type: 'error', content: '删除失败' }); }
-                      }} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">
+                      }} className="text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded hover:bg-red-200 flex items-center">
                         <i className="fas fa-trash-alt mr-1"></i>删除
                       </button>
                     </div>

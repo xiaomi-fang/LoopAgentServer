@@ -56,7 +56,7 @@
           <i className="fas fa-arrow-left mr-2"></i> 返回仪表盘
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
           📦 已发布产物（{products.length}）
         </h1>
 
@@ -68,54 +68,80 @@
             <p className="text-gray-500">暂无已发布产物</p>
           </div>
         ) : (
-          <div className="card overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b text-gray-500 text-sm">
-                  <th className="pb-3 pl-2">类型</th>
-                  <th className="pb-3">URL</th>
-                  <th className="pb-3">描述</th>
-                  <th className="pb-3">关联任务</th>
-                  <th className="pb-3">所属项目</th>
-                  {isAdmin && <th className="pb-3">操作</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(prod => (
-                  <tr key={prod.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="py-3 pl-2">
-                      <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-                        <i className={`fas ${TYPE_ICON[prod.productType] || 'fa-file'} mr-1`}></i>
-                        {TYPE_MAP[prod.productType] || prod.productType}
-                      </span>
-                    </td>
-                    <td className="py-3 text-sm text-blue-600">
-                      <a href={prod.url} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">
-                        {prod.url}
-                      </a>
-                    </td>
-                    <td className="py-3 text-sm text-gray-600">{prod.description || '-'}</td>
-                    <td className="py-3 text-sm text-gray-600">{getTaskTitle(prod.taskId)}</td>
-                    <td className="py-3 text-sm text-gray-600">{getProjectName(prod.taskId)}</td>
-                    {isAdmin && (
-                      <td className="py-3">
-                        <button onClick={async () => {
-                          if (!confirm('确定删除此产物？')) return;
-                          try {
-                            await api.delete(`/products/${prod.id}`);
-                            fetchData();
-                          } catch (err) {
-                            console.error(err);
-                          }
-                        }} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">
-                          <i className="fas fa-trash-alt"></i>
-                        </button>
-                      </td>
-                    )}
+          <div>
+            {/* 桌面端表格 */}
+            <div className="hidden md:block card overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b text-gray-500 text-sm">
+                    <th className="pb-3 pl-2">类型</th>
+                    <th className="pb-3">URL</th>
+                    <th className="pb-3">描述</th>
+                    <th className="pb-3">关联任务</th>
+                    <th className="pb-3">所属项目</th>
+                    {isAdmin && <th className="pb-3">操作</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {products.map(prod => (
+                    <tr key={prod.id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="py-3 pl-2">
+                        <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                          <i className={`fas ${TYPE_ICON[prod.productType] || 'fa-file'} mr-1`}></i>
+                          {TYPE_MAP[prod.productType] || prod.productType}
+                        </span>
+                      </td>
+                      <td className="py-3 text-sm text-blue-600">
+                        <a href={prod.url} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">{prod.url}</a>
+                      </td>
+                      <td className="py-3 text-sm text-gray-600">{prod.description || '-'}</td>
+                      <td className="py-3 text-sm text-gray-600">{getTaskTitle(prod.taskId)}</td>
+                      <td className="py-3 text-sm text-gray-600">{getProjectName(prod.taskId)}</td>
+                      {isAdmin && (
+                        <td className="py-3">
+                          <button onClick={async () => {
+                            if (!confirm('确定删除此产物？')) return;
+                            try { await api.delete(`/products/${prod.id}`); fetchData(); }
+                            catch (err) { console.error(err); }
+                          }} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* 移动端卡片 */}
+            <div className="md:hidden space-y-3">
+              {products.map(prod => (
+                <div key={prod.id} className="card">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded flex-shrink-0">
+                      <i className={`fas ${TYPE_ICON[prod.productType] || 'fa-file'} mr-1`}></i>
+                      {TYPE_MAP[prod.productType] || prod.productType}
+                    </span>
+                    {isAdmin && (
+                      <button onClick={async () => {
+                        if (!confirm('确定删除此产物？')) return;
+                        try { await api.delete(`/products/${prod.id}`); fetchData(); }
+                        catch (err) { console.error(err); }
+                      }} className="text-red-400 hover:text-red-600 px-2 py-1 text-sm flex-shrink-0">
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    )}
+                  </div>
+                  <a href={prod.url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline break-all block mb-1">{prod.url}</a>
+                  {prod.description && <p className="text-xs text-gray-500 mb-1">{prod.description}</p>}
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{getTaskTitle(prod.taskId)}</span>
+                    <span>{getProjectName(prod.taskId)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

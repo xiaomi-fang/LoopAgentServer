@@ -55,7 +55,7 @@ router.get('/', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     name: '环枢',
-    version: '1.0',
+    protocolVersion: '2025-11-25',
     transport: 'streamable_http',
   });
 });
@@ -150,7 +150,7 @@ async function processMessage(msg: any) {
       const sessionId = generateSessionId();
       console.log(`[MCP] Session created: ${sessionId}`);
       return jsonRpcResult(id, {
-        protocolVersion: '1.0',
+        protocolVersion: '2025-11-25',
         capabilities: { tools: {} },
         serverInfo: { name: '环枢', version: '1.0' },
         _meta: { sessionId },

@@ -115,6 +115,14 @@ register('get_project_context', async (args) => {
   return { content: [{ type: 'text', text: JSON.stringify(context) }] };
 });
 
+register('get_projects_by_creator', async (args) => {
+  const projects = await projectService.getProjectsByCreatorAndStatus(
+    args.creator_agent_id as string,
+    args.status as string | undefined,
+  );
+  return { content: [{ type: 'text', text: JSON.stringify(projects) }] };
+});
+
 register('update_project', async (args) => {
   const project = await projectService.updateProject(args.project_id as string, {
     name: args.name as string | undefined,

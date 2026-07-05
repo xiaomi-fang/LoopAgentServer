@@ -29,6 +29,18 @@ export async function getAllProjects() {
   });
 }
 
+/** 按创建者 ID 和状态查询项目 */
+export async function getProjectsByCreatorAndStatus(creatorAgentId: string, status?: string) {
+  const where: any = { creatorAgentId };
+  if (status) {
+    where.status = status;
+  }
+  return prisma.project.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function getProject(projectId: string) {
   return prisma.project.findUnique({ where: { id: projectId } });
 }

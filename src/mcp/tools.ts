@@ -38,6 +38,7 @@ export interface MCPTool {
  *   list_projects      — 获取全部项目
  *   get_project        — 按 ID 查询项目
  *   get_project_context— 获取项目完整上下文（含任务树）
+ *   get_projects_by_creator — 按创建者 ID 及状态查询项目
  *   update_project     — 更新项目
  *
  * === 任务 (Task) ===
@@ -172,6 +173,18 @@ export const MCP_TOOLS: MCPTool[] = [
         project_id: { type: 'string', description: '项目 ID' },
       },
       required: ['project_id'],
+    },
+  },
+  {
+    name: 'get_projects_by_creator',
+    description: '按创建者智能体 ID 查询项目，可选按状态筛选（如 planning）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        creator_agent_id: { type: 'string', description: '创建者（主智能体）ID' },
+        status: { type: 'string', description: '项目状态筛选（可选），如 planning（规划中）、planned（已规划）、under_review（审核中）、in_development（开发中）等' },
+      },
+      required: ['creator_agent_id'],
     },
   },
   {

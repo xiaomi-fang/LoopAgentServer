@@ -10,6 +10,8 @@
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState({ name: '', role: '', capabilities: '' });
+    const [editingAgent, setEditingAgent] = useState(null);
+    const [editForm, setEditForm] = useState({ name: '', role: '', capabilities: '', status: '' });
 
     const fetchData = () => {
       setLoading(true);
@@ -39,6 +41,38 @@
         fetchData();
       } catch (err) {
         setMessage({ type: 'error', content: '注册失败' });
+      }
+    };
+
+    const startEdit = (agent) => {
+      setEditingAgent(agent.id);
+      setEditForm({
+        name: agent.name || '',
+        role: agent.role || '',
+        capabilities: (agent.capabilities || []).join(', '),
+        status: agent.status || 'idle',
+      });
+    };
+
+    const cancelEdit = () => {
+      setEditingAgent(null);
+      setEditForm({ name: '', role: '', capabilities: '', status: '' });
+    };
+
+    const handleEdit = async (agentId) => {
+      if (!editForm.name || !editForm.role) return;
+      try {
+        await api.put(`/agents/${agentId}`, {
+          name: editForm.name,
+          role: editForm.role,
+          capabilities: editForm.capabilities.split(',').map(s => s.trim()).filter(Boolean),
+          status: editForm.status,
+        });
+        cancelEdit();
+        setMessage({ type: 'success', content: '智能体更新成功！' });
+        fetchData();
+      } catch (err) {
+        setMessage({ type: 'error', content: '更新失败' });
       }
     };
 
@@ -113,8 +147,10 @@
                   {agents.map(agent => {
                     const online = isOnline(agent);
                     const agentProjects = getAgentProjects(agent.id);
+                    const isEditing = editingAgent === agent.id;
                     return (
-                      <tr key={agent.id} className="border-b hover:bg-gray-50">
+                      <React.Fragment key={agent.id}>
+                      <tr className="border-b hover:bg-gray-50">
                         <td className="py-3 font-medium">{agent.name}</td>
                         <td className="py-3 text-gray-600">{agent.role}</td>
                         <td className="py-3">
@@ -154,6 +190,11 @@
                               <i className="far fa-copy"></i>
                             </button>
                             {isAdmin && (
+                              <>
+                              <button onClick={() => startEdit(agent)}
+                                className="text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200">
+                                <i className="fas fa-edit mr-1"></i>编辑
+                              </button>
                               <button onClick={async () => {
                                 if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
                                 try { await api.delete(`/agents/${agent.id}`); setMessage({ type: 'success', content: `已删除` }); fetchData(); }
@@ -161,10 +202,58 @@
                               }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">
                                 <i className="fas fa-trash-alt mr-1"></i>删除
                               </button>
+                              </>
                             )}
                           </div>
                         </td>
                       </tr>
+                      {isEditing && (
+                        <tr className="bg-yellow-50 border-b">
+                          <td colSpan="7" className="py-3 px-4">
+                            <div className="flex flex-wrap items-end gap-3">
+                              <div className="flex-1 min-w-[120px]">
+                                <label className="text-xs text-gray-500 mb-1 block">名称</label>
+                                <input value={editForm.name}
+                                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                                  className="border rounded px-2 py-1.5 text-sm w-full" />
+                              </div>
+                              <div className="flex-1 min-w-[120px]">
+                                <label className="text-xs text-gray-500 mb-1 block">角色</label>
+                                <input value={editForm.role}
+                                  onChange={e => setEditForm({...editForm, role: e.target.value})}
+                                  className="border rounded px-2 py-1.5 text-sm w-full" />
+                              </div>
+                              <div className="flex-[2] min-w-[180px]">
+                                <label className="text-xs text-gray-500 mb-1 block">能力（逗号分隔）</label>
+                                <input value={editForm.capabilities}
+                                  onChange={e => setEditForm({...editForm, capabilities: e.target.value})}
+                                  className="border rounded px-2 py-1.5 text-sm w-full" />
+                              </div>
+                              <div className="flex-1 min-w-[100px]">
+                                <label className="text-xs text-gray-500 mb-1 block">状态</label>
+                                <select value={editForm.status}
+                                  onChange={e => setEditForm({...editForm, status: e.target.value})}
+                                  className="border rounded px-2 py-1.5 text-sm w-full">
+                                  <option value="idle">空闲</option>
+                                  <option value="busy">忙碌</option>
+                                  <option value="offline">离线</option>
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => handleEdit(agent.id)}
+                                  className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm whitespace-nowrap">
+                                  <i className="fas fa-check mr-1"></i>保存
+                                </button>
+                                <button onClick={cancelEdit}
+                                  className="bg-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-300 text-sm whitespace-nowrap">
+                                  <i className="fas fa-times mr-1"></i>取消
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -175,9 +264,10 @@
               {agents.map(agent => {
                 const online = isOnline(agent);
                 const agentProjects = getAgentProjects(agent.id);
+                const isEditing = editingAgent === agent.id;
                 return (
-                  <div key={agent.id} className="card" onClick={() => onOpenAgentDetail(agent.id)}>
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={agent.id} className="card">
+                    <div className="flex items-center justify-between mb-2" onClick={() => !isEditing && onOpenAgentDetail(agent.id)}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${online ? 'bg-green-500' : 'bg-gray-300'}`}></span>
                         <h3 className="font-semibold text-gray-800 truncate">{agent.name}</h3>
@@ -191,16 +281,24 @@
                           'bg-red-100 text-red-700'
                         }`}>{statusLabel[agent.status] || agent.status}</span>
                       </div>
-                      {isAdmin && (
-                        <button onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!confirm(`确定删除「${agent.name}」？`)) return;
-                          try { await api.delete(`/agents/${agent.id}`); setMessage({ type: 'success', content: '已删除' }); fetchData(); }
-                          catch (err) { setMessage({ type: 'error', content: '删除失败' }); }
-                        }} className="text-red-400 hover:text-red-600 px-2 py-1 text-sm flex-shrink-0">
-                          <i className="fas fa-trash-alt"></i>
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {isAdmin && !isEditing && (
+                          <>
+                          <button onClick={(e) => { e.stopPropagation(); startEdit(agent); }}
+                            className="text-yellow-500 hover:text-yellow-700 px-2 py-1 text-sm" title="编辑">
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          <button onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm(`确定删除「${agent.name}」？`)) return;
+                            try { await api.delete(`/agents/${agent.id}`); setMessage({ type: 'success', content: '已删除' }); fetchData(); }
+                            catch (err) { setMessage({ type: 'error', content: '删除失败' }); }
+                          }} className="text-red-400 hover:text-red-600 px-2 py-1 text-sm">
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-gray-500 mb-2">{agent.role}</p>
                     {agent.capabilities && agent.capabilities.length > 0 && (
@@ -216,6 +314,48 @@
                         {agentProjects.slice(0, 2).map(p => (
                           <span key={p.id} className="bg-blue-50 text-blue-600 text-xs px-1.5 py-0.5 rounded">{p.name}</span>
                         ))}
+                      </div>
+                    )}
+                    {isEditing && (
+                      <div className="mt-3 pt-3 border-t border-yellow-200 space-y-2">
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-0.5">名称</label>
+                          <input value={editForm.name}
+                            onChange={e => setEditForm({...editForm, name: e.target.value})}
+                            className="border rounded px-2 py-1.5 text-sm w-full" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-0.5">角色</label>
+                          <input value={editForm.role}
+                            onChange={e => setEditForm({...editForm, role: e.target.value})}
+                            className="border rounded px-2 py-1.5 text-sm w-full" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-0.5">能力（逗号分隔）</label>
+                          <input value={editForm.capabilities}
+                            onChange={e => setEditForm({...editForm, capabilities: e.target.value})}
+                            className="border rounded px-2 py-1.5 text-sm w-full" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-0.5">状态</label>
+                          <select value={editForm.status}
+                            onChange={e => setEditForm({...editForm, status: e.target.value})}
+                            className="border rounded px-2 py-1.5 text-sm w-full">
+                            <option value="idle">空闲</option>
+                            <option value="busy">忙碌</option>
+                            <option value="offline">离线</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button onClick={() => handleEdit(agent.id)}
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm flex-1">
+                            <i className="fas fa-check mr-1"></i>保存
+                          </button>
+                          <button onClick={cancelEdit}
+                            className="bg-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-300 text-sm flex-1">
+                            <i className="fas fa-times mr-1"></i>取消
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

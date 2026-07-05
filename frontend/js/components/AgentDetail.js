@@ -10,6 +10,8 @@
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedProject, setExpandedProject] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({ name: '', role: '', capabilities: '', status: '' });
 
     useEffect(() => {
       setLoading(true);
@@ -59,7 +61,20 @@
             <i className="fas fa-arrow-left mr-1"></i>返回
           </button>
           <h1 className="text-2xl font-bold text-gray-800">🤖 {agent.name} 详情</h1>
-          {isAdmin && (
+          {isAdmin && !isEditing && (
+            <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => {
+              setIsEditing(true);
+              setEditForm({
+                name: agent.name || '',
+                role: agent.role || '',
+                capabilities: (agent.capabilities || []).join(', '),
+                status: agent.status || 'idle',
+              });
+            }}
+              className="text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200">
+              <i className="fas fa-edit mr-1"></i>编辑
+            </button>
             <button onClick={async () => {
               if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
               try {
@@ -69,15 +84,78 @@
               } catch (err) {
                 setMessage({ type: 'error', content: '删除失败：' + err.message });
               }
-            }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 ml-auto">
+            }} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">
               <i className="fas fa-trash-alt mr-1"></i>删除智能体
             </button>
+            </div>
           )}
         </div>
 
         {/* 基本信息 */}
         <div className="card mb-6">
           <h3 className="font-semibold text-gray-700 mb-3">基本信息</h3>
+          {isEditing ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-0.5">名称</label>
+                  <input value={editForm.name}
+                    onChange={e => setEditForm({...editForm, name: e.target.value})}
+                    className="border rounded px-2 py-1.5 text-sm w-full" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-0.5">角色</label>
+                  <input value={editForm.role}
+                    onChange={e => setEditForm({...editForm, role: e.target.value})}
+                    className="border rounded px-2 py-1.5 text-sm w-full" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-0.5">能力（逗号分隔）</label>
+                  <input value={editForm.capabilities}
+                    onChange={e => setEditForm({...editForm, capabilities: e.target.value})}
+                    className="border rounded px-2 py-1.5 text-sm w-full" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-0.5">状态</label>
+                  <select value={editForm.status}
+                    onChange={e => setEditForm({...editForm, status: e.target.value})}
+                    className="border rounded px-2 py-1.5 text-sm w-full">
+                    <option value="idle">空闲</option>
+                    <option value="busy">忙碌</option>
+                    <option value="offline">离线</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button onClick={async () => {
+                  if (!editForm.name || !editForm.role) return;
+                  try {
+                    await api.put(`/agents/${agent.id}`, {
+                      name: editForm.name,
+                      role: editForm.role,
+                      capabilities: editForm.capabilities.split(',').map(s => s.trim()).filter(Boolean),
+                      status: editForm.status,
+                    });
+                    setIsEditing(false);
+                    setMessage({ type: 'success', content: '智能体更新成功！' });
+                    // 刷新数据
+                    const resp = await api.get('/agents');
+                    const updated = (resp.data || []).find(x => x.id === agent.id);
+                    if (updated) setAgent(updated);
+                  } catch (err) {
+                    setMessage({ type: 'error', content: '更新失败' });
+                  }
+                }}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm">
+                  <i className="fas fa-check mr-1"></i>保存
+                </button>
+                <button onClick={() => setIsEditing(false)}
+                  className="bg-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-300 text-sm">
+                  <i className="fas fa-times mr-1"></i>取消
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-500">ID</span>
@@ -110,6 +188,7 @@
               <p className="font-medium">{agent.lastHeartbeat ? new Date(agent.lastHeartbeat).toLocaleString() : '无'}</p>
             </div>
           </div>
+          )}
         </div>
 
         {/* 参与项目列表 */}

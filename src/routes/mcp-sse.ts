@@ -3,21 +3,8 @@
  *
  * 遵循 MCP JSON-RPC 2.0 标准，支持 streamable_http 传输模式。
  *
- * 端点说明：
- *   GET  /loop_engineering/mcp  → 服务发现/健康检查（返回 JSON）
- *   POST /loop_engineering/mcp  → JSON-RPC 消息处理
- *
  * QwenPaw 配置：
- *   {
- *     "transport": "streamable_http",
- *     "url": "http://localhost:3000/loop_engineering/mcp"
- *   }
- *
- * 支持的 JSON-RPC 方法：
- *   initialize  → 初始化连接（标准 MCP 握手）
- *   ping        → 心跳检测
- *   tools/list  → 获取所有可用工具定义
- *   tools/call  → 调用指定工具
+ *   { "transport": "streamable_http", "url": "http://localhost:3000/loop_engineering/mcp" }
  *
  * 参考：https://modelcontextprotocol.io
  */
@@ -28,7 +15,6 @@ import { executeTool } from '../mcp/handler';
 
 const router = Router();
 
-/** CORS 头，确保 Electron/浏览器环境可跨域访问 */
 function setCorsHeaders(res: Response) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -36,38 +22,46 @@ function setCorsHeaders(res: Response) {
   res.setHeader('Access-Control-Expose-Headers', 'Content-Type, MCP-Version');
 }
 
-/** JSON-RPC 成功响应 */
 function jsonRpcResult(id: unknown, result: unknown) {
   return { jsonrpc: '2.0', id, result };
 }
 
-/** JSON-RPC 错误响应 */
 function jsonRpcError(id: unknown, code: number, message: string) {
   return { jsonrpc: '2.0', id, error: { code, message } };
+}
+
+/** 生成唯一会话 ID */
+function generateSessionId(): string {
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** 将工具定义中的 snake_case 转为 MCP 标准的 camelCase */
+function toMCPTools(tools: typeof MCP_TOOLS) {
+  return tools.map(t => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.input_schema, // MCP 标准要求 inputSchema（驼峰）
+  }));
 }
 
 /**
  * GET / — 服务发现/健康检查
  *
- * streamable_http 协议中 GET 用于服务发现。
- * 返回简单状态，让客户端确认服务可达。
+ * 返回服务元信息，让客户端确认服务可达和协议版本。
+ * 注意：返回普通 JSON（非 SSE 流），避免客户端检测时挂起。
  */
 router.get('/', (req: Request, res: Response) => {
   setCorsHeaders(res);
   res.json({
     status: 'ok',
-    protocol: 'Model Context Protocol',
+    name: '环枢',
     version: '1.0',
     transport: 'streamable_http',
-    endpoints: {
-      tools_list: { method: 'tools/list', type: 'json-rpc' },
-      tools_call: { method: 'tools/call', type: 'json-rpc' },
-    },
   });
 });
 
 /**
- * OPTIONS / — CORS 预检请求
+ * OPTIONS / — CORS 预检
  */
 router.options('/', (req: Request, res: Response) => {
   setCorsHeaders(res);
@@ -75,48 +69,63 @@ router.options('/', (req: Request, res: Response) => {
 });
 
 /**
- * POST / — JSON-RPC 消息处理
+ * POST / — JSON-RPC 消息处理（同时支持 JSON 和 SSE 响应）
  *
- * 接收标准 JSON-RPC 2.0 请求，支持：
- *   ping        → 返回 {} 
- *   tools/list  → 返回工具列表
- *   tools/call  → 调用工具并返回结果
+ * 接收并处理 JSON-RPC 2.0 请求，支持：
+ *   initialize  → 初始化连接（标准 MCP 握手）
+ *   ping        → 心跳
+ *   tools/list  → 获取工具列表
+ *   tools/call  → 调用工具
  *
- * 请求体：{ "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {} }
- * 响应体：{ "jsonrpc": "2.0", "id": 1, "result": { "tools": [...] } }
+ * 响应格式：
+ *   - 默认返回 JSON (Content-Type: application/json)
+ *   - 如果请求头 Accept 包含 text/event-stream，返回 SSE 流
  */
 router.post('/', async (req: Request, res: Response) => {
   setCorsHeaders(res);
+  res.setHeader('MCP-Version', '1.0');
+
+  console.log(`[MCP] POST body type: ${typeof req.body}, ct: ${req.headers['content-type']}, accept: ${req.headers['accept']}`);
+
+  // 解析请求体（兼容 JSON 对象或未解析的字符串）
+  let parsed: any;
+  if (typeof req.body === 'string' || typeof req.body === 'number' || !req.body) {
+    try { parsed = req.body ? JSON.parse(String(req.body)) : {}; } catch { parsed = {}; }
+  } else {
+    parsed = req.body;
+  }
+
+  const bodyPreview = JSON.stringify(parsed).slice(0, 500);
+  console.log(`[MCP] POST received: ${bodyPreview}`);
 
   try {
-    const { jsonrpc, id, method, params } = req.body;
+    const { jsonrpc, id, method, params } = parsed;
 
-    // MCP-Version 响应头
-    res.setHeader('MCP-Version', '1.0');
-
-    // 校验 JSON-RPC 2.0 格式
     if (jsonrpc !== '2.0') {
-      res.status(400).json(jsonRpcError(id ?? null, -32600, 'Invalid Request: jsonrpc must be "2.0"'));
+      console.log(`[MCP] Invalid jsonrpc version: ${jsonrpc}`);
+      res.status(400).json(jsonRpcError(id ?? null, -32600, 'Invalid Request'));
       return;
     }
 
     if (id === undefined || id === null) {
-      // JSON-RPC 通知（无 id）— 不响应
+      console.log(`[MCP] Notification (no id), 204`);
       res.status(204).end();
       return;
     }
 
+    console.log(`[MCP] Executing method: ${method}, id: ${id}`);
+
     switch (method) {
       case 'initialize': {
         const clientInfo = params?.clientInfo || {};
-        console.log(`[MCP] Client connected: ${clientInfo.name || 'unknown'} v${clientInfo.version || '?'}`);
+        console.log(`[MCP] Client initialize: ${JSON.stringify(clientInfo)}`);
+        const sessionId = generateSessionId();
+        console.log(`[MCP] Session created: ${sessionId}`);
         res.json(jsonRpcResult(id, {
           protocolVersion: '1.0',
           capabilities: { tools: {} },
-          serverInfo: {
-            name: '环枢',
-            version: '1.0',
-          },
+          serverInfo: { name: '环枢', version: '1.0' },
+          _meta: { sessionId },
         }));
         break;
       }
@@ -127,19 +136,19 @@ router.post('/', async (req: Request, res: Response) => {
       }
 
       case 'tools/list': {
-        res.json(jsonRpcResult(id, { tools: MCP_TOOLS }));
+        console.log(`[MCP] tools/list returning ${MCP_TOOLS.length} tools`);
+        res.json(jsonRpcResult(id, { tools: toMCPTools(MCP_TOOLS) }));
         break;
       }
 
       case 'tools/call': {
         const { name, arguments: args } = params || {};
+        console.log(`[MCP] tools/call: ${name}`);
         if (!name) {
-          res.json(jsonRpcError(id, -32602, 'Missing tool name in params'));
+          res.json(jsonRpcError(id, -32602, 'Missing tool name'));
           return;
         }
         const result = await executeTool(name as string, (args as Record<string, unknown>) || {});
-
-        // 从 MCPResponse 中提取文本内容
         const textContent = result.content
           ?.map((c: { type: string; text: string }) => c.text)
           .join('\n') || '';
@@ -147,22 +156,20 @@ router.post('/', async (req: Request, res: Response) => {
         if (result.isError) {
           res.json(jsonRpcError(id, -32000, textContent));
         } else {
-          // 尝试解析 JSON 字符串为结构化结果
-          try {
-            res.json(jsonRpcResult(id, JSON.parse(textContent)));
-          } catch {
-            res.json(jsonRpcResult(id, { text: textContent }));
-          }
+          try { res.json(jsonRpcResult(id, JSON.parse(textContent))); }
+          catch { res.json(jsonRpcResult(id, { text: textContent })); }
         }
         break;
       }
 
       default: {
+        console.log(`[MCP] Unknown method: ${method}`);
         res.json(jsonRpcError(id, -32601, `Method not found: ${method}`));
       }
     }
   } catch (err: any) {
-    res.json(jsonRpcError(req.body?.id ?? null, -32603, err?.message || 'Internal error'));
+    console.error(`[MCP] POST error:`, err.message);
+    res.json(jsonRpcError(parsed?.id ?? null, -32603, err?.message || 'Internal error'));
   }
 });
 

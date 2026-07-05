@@ -99,78 +99,97 @@ router.post('/', async (req: Request, res: Response) => {
   console.log(`[MCP] POST received: ${bodyPreview}`);
 
   try {
-    const { jsonrpc, id, method, params } = parsed;
-
-    if (jsonrpc !== '2.0') {
-      console.log(`[MCP] Invalid jsonrpc version: ${jsonrpc}`);
-      res.status(400).json(jsonRpcError(id ?? null, -32600, 'Invalid Request'));
+    // === JSON-RPC 2.0 批处理支持 ===
+    // 客户端可能一次发送多条消息（数组格式）
+    if (Array.isArray(parsed)) {
+      const results = (await Promise.all(
+        parsed.map(async (msg: any) => {
+          try { return await processMessage(msg); }
+          catch (err: any) { return jsonRpcError(msg?.id ?? null, -32603, err?.message || 'Internal error'); }
+        })
+      )).filter(r => r !== null); // 过滤掉通知类消息（不响应）
+      res.json(results);
       return;
     }
 
-    if (id === undefined || id === null) {
-      console.log(`[MCP] Notification (no id), 204`);
-      res.status(204).end();
-      return;
-    }
-
-    console.log(`[MCP] Executing method: ${method}, id: ${id}`);
-
-    switch (method) {
-      case 'initialize': {
-        const clientInfo = params?.clientInfo || {};
-        console.log(`[MCP] Client initialize: ${JSON.stringify(clientInfo)}`);
-        const sessionId = generateSessionId();
-        console.log(`[MCP] Session created: ${sessionId}`);
-        res.json(jsonRpcResult(id, {
-          protocolVersion: '1.0',
-          capabilities: { tools: {} },
-          serverInfo: { name: '环枢', version: '1.0' },
-          _meta: { sessionId },
-        }));
-        break;
-      }
-
-      case 'ping': {
-        res.json(jsonRpcResult(id, {}));
-        break;
-      }
-
-      case 'tools/list': {
-        console.log(`[MCP] tools/list returning ${MCP_TOOLS.length} tools`);
-        res.json(jsonRpcResult(id, { tools: toMCPTools(MCP_TOOLS) }));
-        break;
-      }
-
-      case 'tools/call': {
-        const { name, arguments: args } = params || {};
-        console.log(`[MCP] tools/call: ${name}`);
-        if (!name) {
-          res.json(jsonRpcError(id, -32602, 'Missing tool name'));
-          return;
-        }
-        const result = await executeTool(name as string, (args as Record<string, unknown>) || {});
-        const textContent = result.content
-          ?.map((c: { type: string; text: string }) => c.text)
-          .join('\n') || '';
-
-        if (result.isError) {
-          res.json(jsonRpcError(id, -32000, textContent));
-        } else {
-          try { res.json(jsonRpcResult(id, JSON.parse(textContent))); }
-          catch { res.json(jsonRpcResult(id, { text: textContent })); }
-        }
-        break;
-      }
-
-      default: {
-        console.log(`[MCP] Unknown method: ${method}`);
-        res.json(jsonRpcError(id, -32601, `Method not found: ${method}`));
-      }
+    // === 单条消息处理 ===
+    const result = await processMessage(parsed);
+    if (result === null) {
+      res.status(204).end(); // 通知类消息，无响应
+    } else {
+      res.json(result);
     }
   } catch (err: any) {
     console.error(`[MCP] POST error:`, err.message);
     res.json(jsonRpcError(parsed?.id ?? null, -32603, err?.message || 'Internal error'));
   }
 });
+
+/**
+ * 处理单条 JSON-RPC 2.0 消息
+ */
+async function processMessage(msg: any) {
+  const { jsonrpc, id, method, params } = msg;
+
+  if (jsonrpc !== '2.0') {
+    console.log(`[MCP] Invalid jsonrpc version: ${jsonrpc}`);
+    return jsonRpcError(id ?? null, -32600, 'Invalid Request');
+  }
+
+  if (id === undefined || id === null) {
+    console.log(`[MCP] Notification (no id)`);
+    return null; // 通知类消息不响应
+  }
+
+  console.log(`[MCP] Executing method: ${method}, id: ${id}`);
+
+  switch (method) {
+    case 'initialize': {
+      const clientInfo = params?.clientInfo || {};
+      console.log(`[MCP] Client initialize: ${JSON.stringify(clientInfo)}`);
+      const sessionId = generateSessionId();
+      console.log(`[MCP] Session created: ${sessionId}`);
+      return jsonRpcResult(id, {
+        protocolVersion: '1.0',
+        capabilities: { tools: {} },
+        serverInfo: { name: '环枢', version: '1.0' },
+        _meta: { sessionId },
+      });
+    }
+
+    case 'ping': {
+      return jsonRpcResult(id, {});
+    }
+
+    case 'tools/list': {
+      console.log(`[MCP] tools/list returning ${MCP_TOOLS.length} tools`);
+      return jsonRpcResult(id, { tools: toMCPTools(MCP_TOOLS) });
+    }
+
+    case 'tools/call': {
+      const { name, arguments: args } = params || {};
+      console.log(`[MCP] tools/call: ${name}`);
+      if (!name) {
+        return jsonRpcError(id, -32602, 'Missing tool name');
+      }
+      const result = await executeTool(name as string, (args as Record<string, unknown>) || {});
+      const textContent = result.content
+        ?.map((c: { type: string; text: string }) => c.text)
+        .join('\n') || '';
+
+      if (result.isError) {
+        return jsonRpcError(id, -32000, textContent);
+      } else {
+        try { return jsonRpcResult(id, JSON.parse(textContent)); }
+        catch { return jsonRpcResult(id, { text: textContent }); }
+      }
+    }
+
+    default: {
+      console.log(`[MCP] Unknown method: ${method}`);
+      return jsonRpcError(id, -32601, `Method not found: ${method}`);
+    }
+  }
+}
 
 export default router;

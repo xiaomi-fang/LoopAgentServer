@@ -173,15 +173,15 @@ async function processMessage(msg: any) {
         return jsonRpcError(id, -32602, 'Missing tool name');
       }
       const result = await executeTool(name as string, (args as Record<string, unknown>) || {});
-      const textContent = result.content
-        ?.map((c: { type: string; text: string }) => c.text)
-        .join('\n') || '';
 
       if (result.isError) {
-        return jsonRpcError(id, -32000, textContent);
+        const errMsg = result.content?.map((c: any) => c.text).join('\n') || 'Unknown error';
+        return jsonRpcError(id, -32000, errMsg);
       } else {
-        try { return jsonRpcResult(id, JSON.parse(textContent)); }
-        catch { return jsonRpcResult(id, { text: textContent }); }
+        // MCP 标准格式：{ content: [{ type: 'text', text: '...' }] }
+        return jsonRpcResult(id, {
+          content: result.content || [],
+        });
       }
     }
 

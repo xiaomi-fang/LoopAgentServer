@@ -156,3 +156,9 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ── 换行渲染 ── */
+.white-space-pre-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

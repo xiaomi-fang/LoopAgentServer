@@ -15,7 +15,7 @@
 
   function ProjectEdit({ mode, projectId, onClose, setMessage, isAdmin }) {
     const [form, setForm] = useState({
-      name: '', description: '', goal: '', githubUrl: '', creatorAgentId: '', status: 'planning',
+      name: '', description: '', goal: '', acceptanceCriteria: '', githubUrl: '', creatorAgentId: '', status: 'planning',
     });
     const [agents, setAgents] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -31,6 +31,7 @@
               name: p.name || '',
               description: p.description || '',
               goal: p.goal || '',
+              acceptanceCriteria: p.acceptanceCriteria || '',
               githubUrl: p.githubUrl || '',
               creatorAgentId: p.creatorAgentId || '',
               status: p.status || 'planning',
@@ -50,12 +51,14 @@
         if (isEdit) {
           await api.put(`/projects/${projectId}`, {
             name: form.name, description: form.description, goal: form.goal,
+            acceptance_criteria: form.acceptanceCriteria,
             github_url: form.githubUrl, status: form.status,
           });
           setMessage({ type: 'success', content: '项目已更新' });
         } else {
           await api.post('/projects', {
             name: form.name, description: form.description, goal: form.goal,
+            acceptance_criteria: form.acceptanceCriteria,
             github_url: form.githubUrl, creator_agent_id: form.creatorAgentId,
           });
           setMessage({ type: 'success', content: '项目创建成功！' });
@@ -152,6 +155,15 @@
                     onChange={e => setForm({...form, description: e.target.value})}
                     className="w-full border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition"
                     placeholder="详细描述项目内容" rows={4} />
+                </div>
+
+                {/* 验收标准 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">项目验收标准</label>
+                  <textarea value={form.acceptanceCriteria}
+                    onChange={e => setForm({...form, acceptanceCriteria: e.target.value})}
+                    className="w-full border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition"
+                    placeholder="描述项目的验收标准，多条可换行" rows={4} />
                 </div>
 
                 {/* 状态 */}

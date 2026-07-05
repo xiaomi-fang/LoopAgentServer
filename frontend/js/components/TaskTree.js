@@ -134,12 +134,12 @@
       /* 目标描述 */
       React.createElement('div', null,
         React.createElement('div', { className: 'text-xs text-gray-400 mb-1' }, '目标'),
-        React.createElement('p', { className: 'text-sm text-gray-700 bg-gray-50 rounded p-3' }, task.objective),
+        React.createElement('p', { className: 'text-sm text-gray-700 bg-gray-50 rounded p-3 white-space-pre-wrap' }, task.objective),
       ),
       /* 验收标准 */
       React.createElement('div', null,
         React.createElement('div', { className: 'text-xs text-gray-400 mb-1' }, '验收标准'),
-        React.createElement('p', { className: 'text-sm text-gray-700 bg-gray-50 rounded p-3' }, task.acceptanceCriteria),
+        React.createElement('p', { className: 'text-sm text-gray-700 bg-gray-50 rounded p-3 white-space-pre-wrap' }, task.acceptanceCriteria),
       ),
       /* 人员 */
       React.createElement('div', { className: 'grid grid-cols-3 gap-3 text-sm' },

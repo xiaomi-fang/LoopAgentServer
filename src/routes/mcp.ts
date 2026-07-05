@@ -5,6 +5,10 @@
  *   POST /mcp/v1/tools      — 列出所有可用工具及 JSON Schema
  *   POST /mcp/v1/execute    — 执行指定工具
  *
+ * ⚠️ 安全策略：
+ *   - 不暴露任何删除接口
+ *   - 所有工具无需管理员认证
+ *
  * 此模块仅添加 MCP 协议层，不修改现有 REST API 和前端代码。
  * 所有工具调用委托到 MCP handler，handler 再映射到各 Service。
  *

@@ -2,6 +2,11 @@
 
 > 环枢（LoopEngineeringManager）对外暴露标准 [Model Context Protocol](https://modelcontextprotocol.io) 接口，
 > 允许 LLM 或 AI 客户端通过统一的工具调用协议与系统交互。
+>
+> ⚠️ **安全策略：**
+>   - MCP **不暴露任何删除接口**，防止误操作
+>   - 所有工具**无需管理员认证**，适合 LLM 自动化编排
+>   - 删除操作需通过 Web 管理后台的 REST API 执行（需管理员登录）
 
 ---
 
@@ -165,8 +170,7 @@ Content-Type: application/json
 | `get_agent` | 按 ID 查询智能体 | `agent_id` |
 | `discover_agents` | 按能力发现空闲智能体 | —（可选 `capability`） |
 | `agent_heartbeat` | 更新智能体心跳 | `agent_id` |
-| `delete_agent` | 删除智能体（需管理员） | `agent_id` |
-| `update_agent` | 更新智能体信息（需管理员） | `agent_id` |
+| `update_agent` | 更新智能体信息 | `agent_id` |
 
 **注册智能体示例：**
 
@@ -202,8 +206,7 @@ POST /mcp/v1/execute
 | `list_projects` | 获取全部项目 | — |
 | `get_project` | 按 ID 查询项目 | `project_id` |
 | `get_project_context` | 获取项目完整上下文（含任务树、产物） | `project_id` |
-| `update_project` | 更新项目（需管理员） | `project_id` |
-| `delete_project` | 删除项目（需管理员） | `project_id` |
+| `update_project` | 更新项目 | `project_id` |
 
 **创建项目示例：**
 
@@ -247,8 +250,7 @@ POST /mcp/v1/execute
 | `update_task_status` | 更新任务状态 | `task_id`, `status` |
 | `review_task` | 审核任务 | `task_id`, `approved` |
 | `get_task_tree` | 获取项目任务树 | `project_id` |
-| `delete_task` | 删除任务（需管理员） | `task_id` |
-| `update_task` | 更新任务（需管理员） | `task_id` |
+| `update_task` | 更新任务 | `task_id` |
 
 **创建任务示例：**
 
@@ -325,8 +327,7 @@ pending  →  in_progress  →  pending_review  →  completed
 |--------|------|----------|
 | `publish_product` | 发布产物 | `task_id`, `product_type`, `url` |
 | `list_products` | 获取全部产物 | — |
-| `delete_product` | 删除产物（需管理员） | `product_id` |
-| `update_product` | 更新产物（需管理员） | `product_id` |
+| `update_product` | 更新产物 | `product_id` |
 
 **发布产物示例：**
 
@@ -398,7 +399,8 @@ MCP 接口与 REST API **并行运行，功能等价**，不互相替代。
 | 维度 | REST API | MCP |
 |------|----------|-----|
 | 适用场景 | Web 前端、浏览器开发工具 | LLM、AI 客户端、自动化代理 |
-| 认证方式 | 管理员 JWT（前端登录） | 无内置认证（适合 LLM 内部调用） |
+| 认证方式 | 管理员 JWT（前端登录） | **无需认证** |
+| 删除接口 | ✅ 有（需管理员） | **❌ 无** |
 | 调用方式 | HTTP 动词 + URL 路径 | JSON-RPC 风格工具调用 |
 | 返回格式 | 自定义 JSON | 标准 `{ content: [...] }` |
 | 数据格式 | 与前端约定（snake_case） | 同底层 snake_case | 接口协议 | HTTP/1.1 | Model Context Protocol |
@@ -419,7 +421,8 @@ MCP 接口与 REST API **并行运行，功能等价**，不互相替代。
 
 **Q: MCP 接口需要管理员认证吗？**
 
-目前管理员操作（如 delete、update）底层会验证权限，但 MCP 协议层没有强制 JWT 认证。如果需要生产环境安全加固，可在 `src/routes/mcp.ts` 中添加 `requireAdmin` 中间件。
+不需要。MCP 所有工具无需管理员认证，方便 LLM 自动化编排。
+但 MCP 不暴露任何删除接口，删除操作需通过 Web 管理后台执行。
 
 **Q: 如何给 LLM（如 Claude）配置 MCP 工具？**
 

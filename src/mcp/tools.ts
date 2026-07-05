@@ -4,6 +4,10 @@
  * 遵循 MCP 标准规范，通过 JSON Schema 定义每个工具的入参格式。
  * 所有工具映射到底层 Service 层，与 REST API 共享同一套业务逻辑。
  *
+ * ⚠️ 安全策略：
+ *   - MCP 不暴露任何删除接口（delete），防止误操作
+ *   - 所有工具无需管理员认证，适合 LLM 自动化编排
+ *
  * 参考：https://modelcontextprotocol.io
  */
 
@@ -27,7 +31,6 @@ export interface MCPTool {
  *   get_agent          — 按 ID 查询智能体
  *   discover_agents    — 按能力发现空闲智能体
  *   agent_heartbeat    — 更新智能体心跳
- *   delete_agent       — 删除智能体
  *   update_agent       — 更新智能体信息
  *
  * === 项目 (Project) ===
@@ -36,7 +39,6 @@ export interface MCPTool {
  *   get_project        — 按 ID 查询项目
  *   get_project_context— 获取项目完整上下文（含任务树）
  *   update_project     — 更新项目
- *   delete_project     — 删除项目
  *
  * === 任务 (Task) ===
  *   create_task        — 创建任务
@@ -46,13 +48,11 @@ export interface MCPTool {
  *   update_task_status — 更新任务状态
  *   review_task        — 审核任务
  *   get_task_tree      — 获取项目任务树
- *   delete_task        — 删除任务
  *   update_task        — 更新任务
  *
  * === 产物 (Product) ===
  *   publish_product    — 发布产物
  *   list_products      — 获取全部产物
- *   delete_product     — 删除产物
  *   update_product     — 更新产物
  */
 export const MCP_TOOLS: MCPTool[] = [
@@ -112,19 +112,8 @@ export const MCP_TOOLS: MCPTool[] = [
     },
   },
   {
-    name: 'delete_agent',
-    description: '删除指定智能体（需要管理员权限）',
-    input_schema: {
-      type: 'object',
-      properties: {
-        agent_id: { type: 'string', description: '智能体 ID' },
-      },
-      required: ['agent_id'],
-    },
-  },
-  {
     name: 'update_agent',
-    description: '更新智能体的名称、角色、能力等信息（需要管理员权限）',
+    description: '更新智能体的名称、角色、能力等信息',
     input_schema: {
       type: 'object',
       properties: {
@@ -187,7 +176,7 @@ export const MCP_TOOLS: MCPTool[] = [
   },
   {
     name: 'update_project',
-    description: '更新项目信息（需要管理员权限）',
+    description: '更新项目信息',
     input_schema: {
       type: 'object',
       properties: {
@@ -198,17 +187,6 @@ export const MCP_TOOLS: MCPTool[] = [
         acceptance_criteria: { type: 'string', description: '项目验收标准' },
         github_url: { type: 'string', description: 'GitHub 链接' },
         status: { type: 'string', description: '状态：pending_activation / planning / planned / under_review / review_failed / review_passed / in_development / development_paused' },
-      },
-      required: ['project_id'],
-    },
-  },
-  {
-    name: 'delete_project',
-    description: '删除项目及其所有任务和产物（需要管理员权限）',
-    input_schema: {
-      type: 'object',
-      properties: {
-        project_id: { type: 'string', description: '项目 ID' },
       },
       required: ['project_id'],
     },
@@ -305,19 +283,8 @@ export const MCP_TOOLS: MCPTool[] = [
     },
   },
   {
-    name: 'delete_task',
-    description: '删除指定任务（需要管理员权限）',
-    input_schema: {
-      type: 'object',
-      properties: {
-        task_id: { type: 'string', description: '任务 ID' },
-      },
-      required: ['task_id'],
-    },
-  },
-  {
     name: 'update_task',
-    description: '更新任务信息（需要管理员权限）',
+    description: '更新任务信息',
     input_schema: {
       type: 'object',
       properties: {
@@ -357,19 +324,8 @@ export const MCP_TOOLS: MCPTool[] = [
     },
   },
   {
-    name: 'delete_product',
-    description: '删除指定产物（需要管理员权限）',
-    input_schema: {
-      type: 'object',
-      properties: {
-        product_id: { type: 'string', description: '产物 ID' },
-      },
-      required: ['product_id'],
-    },
-  },
-  {
     name: 'update_product',
-    description: '更新产物信息（需要管理员权限）',
+    description: '更新产物信息',
     input_schema: {
       type: 'object',
       properties: {

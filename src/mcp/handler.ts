@@ -4,6 +4,10 @@
  * 接收工具名称和参数，路由到对应的 Service 层函数执行。
  * 与 REST API 共享同一套业务逻辑，不重复实现。
  *
+ * ⚠️ 安全策略：
+ *   - 不暴露任何删除接口（由 MCP 工具定义层控制）
+ *   - 所有工具无需管理员认证
+ *
  * 返回格式遵循 MCP 标准：{ content: [{ type: 'text', text: '...' }] }
  */
 
@@ -66,11 +70,6 @@ register('agent_heartbeat', async (args) => {
   return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
 });
 
-register('delete_agent', async (args) => {
-  await agentService.deleteAgent(args.agent_id as string);
-  return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: '已删除' }) }] };
-});
-
 register('update_agent', async (args) => {
   const agent = await agentService.updateAgent(args.agent_id as string, {
     name: args.name as string | undefined,
@@ -126,11 +125,6 @@ register('update_project', async (args) => {
     status: args.status as string | undefined,
   });
   return { content: [{ type: 'text', text: JSON.stringify(project) }] };
-});
-
-register('delete_project', async (args) => {
-  await projectService.deleteProject(args.project_id as string);
-  return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: '已删除' }) }] };
 });
 
 // ── 任务工具注册 ──────────────────────────────────────────
@@ -202,11 +196,6 @@ register('get_task_tree', async (args) => {
   return { content: [{ type: 'text', text: JSON.stringify(tree) }] };
 });
 
-register('delete_task', async (args) => {
-  await taskService.deleteTask(args.task_id as string);
-  return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: '已删除' }) }] };
-});
-
 register('update_task', async (args) => {
   const task = await taskService.updateTask(args.task_id as string, {
     title: args.title as string | undefined,
@@ -234,11 +223,6 @@ register('publish_product', async (args) => {
 register('list_products', async () => {
   const products = await productService.getAllProducts();
   return { content: [{ type: 'text', text: JSON.stringify(products) }] };
-});
-
-register('delete_product', async (args) => {
-  await productService.deleteProduct(args.product_id as string);
-  return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: '已删除' }) }] };
 });
 
 register('update_product', async (args) => {

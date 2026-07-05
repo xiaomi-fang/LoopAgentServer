@@ -20,7 +20,8 @@ model Agent {
   assignedTasks Task[]   @relation("Assignee")
   reviewedTasks Task[]   @relation("Reviewer")
   createdTasks  Task[]   @relation("Creator")
-  createdProjects Project[] @relation("ProjectCreator")
+  createdProjects Project[]      @relation("ProjectCreator")
+  reviewRecords   ReviewRecord[]
 
   @@map("agents")
 }
@@ -68,6 +69,7 @@ model Task {
   reviewer     Agent?   @relation("Reviewer", fields: [reviewerAgentId], references: [id])
   creator      Agent    @relation("Creator", fields: [creatorAgentId], references: [id])
   products     Product[]
+  reviewRecords ReviewRecord[]
 
   @@map("tasks")
 }
@@ -85,4 +87,19 @@ model Product {
   task Task @relation(fields: [taskId], references: [id])
 
   @@map("products")
+}
+
+model ReviewRecord {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  reviewerId String   @map("reviewer_id")
+  suggestion String
+  status     String   @default("in_review") // in_review | approved | rejected | re_requested
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  task     Task  @relation(fields: [taskId], references: [id])
+  reviewer Agent @relation(fields: [reviewerId], references: [id])
+
+  @@map("review_records")
 }

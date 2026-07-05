@@ -55,6 +55,11 @@ export interface MCPTool {
  *   publish_product    — 发布产物
  *   list_products      — 获取全部产物
  *   update_product     — 更新产物
+ *
+ * === 审核记录 (ReviewRecord) ===
+ *   create_review_record      — 创建审核记录
+ *   get_review_records_by_task — 按任务 ID 查询审核记录
+ *   update_review_record_status — 更新审核记录状态
  */
 export const MCP_TOOLS: MCPTool[] = [
   // ── 智能体 ──────────────────────────────────────────────
@@ -349,6 +354,45 @@ export const MCP_TOOLS: MCPTool[] = [
         version: { type: 'string', description: '版本号' },
       },
       required: ['product_id'],
+    },
+  },
+
+  // ── 审核记录 ────────────────────────────────────────────
+  {
+    name: 'create_review_record',
+    description: '审核者审核任务后创建审核记录，含审核建议和结果',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: '任务 ID' },
+        reviewer_id: { type: 'string', description: '审核者智能体 ID' },
+        suggestion: { type: 'string', description: '审核者建议（一经创建不可修改）' },
+        status: { type: 'string', description: '审核状态：in_review（默认）/ approved / rejected' },
+      },
+      required: ['task_id', 'reviewer_id', 'suggestion'],
+    },
+  },
+  {
+    name: 'get_review_records_by_task',
+    description: '按任务 ID 查询所有审核记录',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: '任务 ID' },
+      },
+      required: ['task_id'],
+    },
+  },
+  {
+    name: 'update_review_record_status',
+    description: '更新审核记录状态，如重新请求审核（re_requested）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        record_id: { type: 'string', description: '审核记录 ID' },
+        status: { type: 'string', description: '新状态：in_review / approved / rejected / re_requested' },
+      },
+      required: ['record_id', 'status'],
     },
   },
 ];

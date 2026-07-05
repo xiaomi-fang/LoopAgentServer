@@ -15,6 +15,7 @@ import * as agentService from '../services/agent.service';
 import * as projectService from '../services/project.service';
 import * as taskService from '../services/task.service';
 import * as productService from '../services/product.service';
+import * as reviewRecordService from '../services/review-record.service';
 import { MCPTool, MCP_TOOLS } from './tools';
 
 /** MCP 统一返回格式 */
@@ -240,6 +241,31 @@ register('update_product', async (args) => {
     description: args.description as string | undefined,
   });
   return { content: [{ type: 'text', text: JSON.stringify(product) }] };
+});
+
+// ── 审核记录工具注册 ─────────────────────────────────────
+
+register('create_review_record', async (args) => {
+  const record = await reviewRecordService.createReviewRecord({
+    taskId: args.task_id as string,
+    reviewerId: args.reviewer_id as string,
+    suggestion: args.suggestion as string,
+    status: args.status as string | undefined,
+  });
+  return { content: [{ type: 'text', text: JSON.stringify(record) }] };
+});
+
+register('get_review_records_by_task', async (args) => {
+  const records = await reviewRecordService.getReviewRecordsByTask(args.task_id as string);
+  return { content: [{ type: 'text', text: JSON.stringify(records) }] };
+});
+
+register('update_review_record_status', async (args) => {
+  const record = await reviewRecordService.updateReviewRecordStatus(
+    args.record_id as string,
+    args.status as string,
+  );
+  return { content: [{ type: 'text', text: JSON.stringify(record) }] };
 });
 
 // ── 导出 ──────────────────────────────────────────────────

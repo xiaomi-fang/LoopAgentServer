@@ -168,6 +168,14 @@
         React.createElement('div', { className: 'text-xs text-gray-400 mb-1' }, '审核备注'),
         React.createElement('p', { className: 'text-sm text-gray-700 bg-amber-50 rounded p-3' }, task.comment),
       ),
+      /* 审核记录（仅已创建的任务展示） */
+      task.id && React.createElement(window.LoopAgent.ReviewRecords, {
+        taskId: task.id,
+        agents,
+        setMessage,
+        isAdmin,
+        onRefresh,
+      }),
     );
   }
 

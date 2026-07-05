@@ -149,6 +149,10 @@
                           <div className="flex items-center gap-2">
                             <button onClick={() => onOpenAgentDetail(agent.id)}
                               className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">查看详情</button>
+                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(agent.id); setMessage({ type: 'success', content: '已复制 ID' }); }}
+                              className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded" title="复制 ID">
+                              <i className="far fa-copy"></i>
+                            </button>
                             {isAdmin && (
                               <button onClick={async () => {
                                 if (!confirm(`确定删除智能体「${agent.name}」？`)) return;
@@ -177,6 +181,10 @@
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${online ? 'bg-green-500' : 'bg-gray-300'}`}></span>
                         <h3 className="font-semibold text-gray-800 truncate">{agent.name}</h3>
+                        <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(agent.id); setMessage({ type: 'success', content: '已复制 ID' }); }}
+                          className="text-blue-300 hover:text-blue-500 flex-shrink-0 text-xs" title="复制 ID">
+                          <i className="far fa-copy"></i>
+                        </button>
                         <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${
                           agent.status === 'idle' ? 'bg-green-100 text-green-700' :
                           agent.status === 'busy' ? 'bg-yellow-100 text-yellow-700' :

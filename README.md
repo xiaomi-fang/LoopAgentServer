@@ -1,4 +1,4 @@
-# LoopAgent - MCP Multi-Agent Collaboration Hub
+# LoopEngineering - MCP Multi-Agent Collaboration Hub
 
 LoopAgent 是一个基于 MCP (Model Context Protocol) 架构的多智能体协作平台。它旨在协调多个智能体共同完成复杂的项目目标，通过任务分解、自动化执行引擎和可视化管理界面，实现从需求到产物的全流程自动化。
 

@@ -8,6 +8,7 @@ import taskRoutes from './routes/tasks';
 import productRoutes from './routes/products';
 import authRoutes from './routes/auth';
 import reviewRecordRoutes from './routes/review-records';
+import workflowRoutes from './routes/workflows';
 import mcpRoutes from './routes/mcp';
 import mcpSseRoutes from './routes/mcp-sse';
 import { AgentPlatformFactory } from './platforms/platform-factory';
@@ -30,6 +31,8 @@ app.use('/projects', projectRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/products', productRoutes);
 app.use('/review-records', reviewRecordRoutes);
+
+app.use('/api/workflows', workflowRoutes);
 
 // MCP (Model Context Protocol) 标准接口
 // POST /mcp/v1/tools    — 列出所有工具

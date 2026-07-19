@@ -101,7 +101,25 @@
                   </div>
                   {/* 管理员操作 */}
                   {isAdmin && (
-                    <div className="mt-3 pt-3 border-t flex justify-end gap-2" onClick={e => e.stopPropagation()}>
+                    <div className="mt-3 pt-3 border-t flex flex-wrap justify-end gap-2" onClick={e => e.stopPropagation()}>
+                      {project.status === 'pending_activation' && (
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          try { await api.put(`/projects/${project.id}/activate`); setMessage({ type: 'success', content: '项目已激活' }); fetchData(); }
+                          catch (err) { setMessage({ type: 'error', content: '激活失败' }); }
+                        }} className="text-xs bg-green-100 text-green-600 px-3 py-1.5 rounded hover:bg-green-200 flex items-center">
+                          <i className="fas fa-play mr-1"></i>激活
+                        </button>
+                      )}
+                      {project.status === 'review_passed' && (
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          try { await api.put(`/projects/${project.id}/start-dev`); setMessage({ type: 'success', content: '项目进入研发阶段' }); fetchData(); }
+                          catch (err) { setMessage({ type: 'error', content: '启动研发失败' }); }
+                        }} className="text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-200 flex items-center">
+                          <i className="fas fa-flask mr-1"></i>开始研发
+                        </button>
+                      )}
                       <button onClick={() => onOpenProjectEdit && onOpenProjectEdit('edit', project.id)}
                         className="text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-200 flex items-center">
                         <i className="fas fa-edit mr-1"></i>编辑

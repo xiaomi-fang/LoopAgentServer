@@ -38,6 +38,64 @@
     { value: 'development_paused', label: '研发暂停' },
   ];
 
+  function ReviewModal({ projectId, onClose, onReview, setMessage }) {
+    const [approved, setApproved] = useState(false);
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+      setSubmitting(true);
+      try {
+        const res = await onReview(projectId, approved, comment);
+        setMessage({ type: 'success', content: res.data.message || '审核完成' });
+        onClose(true);
+      } catch (err) {
+        setMessage({ type: 'error', content: err.message });
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    return React.createElement('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50' },
+      React.createElement('div', { className: 'bg-white rounded-xl shadow-2xl p-6 w-96 max-w-[90vw]' },
+        React.createElement('h3', { className: 'font-bold text-lg mb-4' }, '项目审核'),
+        React.createElement('div', { className: 'flex gap-4 mb-4' },
+          React.createElement('button', {
+            onClick: () => setApproved(true),
+            className: `flex-1 py-3 rounded-lg text-sm font-medium border-2 transition ${approved ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`,
+          },
+            React.createElement('i', { className: 'fas fa-check-circle mr-2' }),
+            '通过',
+          ),
+          React.createElement('button', {
+            onClick: () => setApproved(false),
+            className: `flex-1 py-3 rounded-lg text-sm font-medium border-2 transition ${!approved ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`,
+          },
+            React.createElement('i', { className: 'fas fa-times-circle mr-2' }),
+            '驳回',
+          ),
+        ),
+        !approved && React.createElement('textarea', {
+          placeholder: '请填写驳回原因（必填）',
+          value: comment,
+          onChange: e => setComment(e.target.value),
+          className: 'w-full border rounded px-3 py-2 text-sm mb-4 h-24 resize-none',
+        }),
+        React.createElement('div', { className: 'flex gap-2' },
+          React.createElement('button', {
+            onClick: () => onClose(false),
+            className: 'flex-1 py-2 text-sm text-gray-500 border rounded hover:bg-gray-50',
+          }, '取消'),
+          React.createElement('button', {
+            onClick: handleSubmit,
+            disabled: submitting || (!approved && !comment),
+            className: 'flex-1 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50',
+          }, submitting ? '提交中...' : '确认审核'),
+        ),
+      ),
+    );
+  }
+
   function ProjectDetail({ projectId, onBack, setMessage, isAdmin, onOpenProjectEdit, onOpenTaskEdit }) {
     const [project, setProject] = useState(null);
     const [agents, setAgents] = useState([]);
@@ -45,6 +103,7 @@
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('tasks'); // 'tasks' | 'products'
+    const [showReviewModal, setShowReviewModal] = useState(false);
 
     const fetchData = () => {
       setLoading(true);
@@ -75,6 +134,10 @@
       } catch (err) {
         setMessage({ type: 'error', content: '更新状态失败' });
       }
+    };
+
+    const handleReview = async (projectId, approved, comment) => {
+      return api.put(`/projects/${projectId}/review`, { approved, comment });
     };
 
     const typeMap = { code_repo: '代码仓库', document: '文档', api_definition: 'API 定义', image: '图片', data_file: '数据文件' };
@@ -144,7 +207,14 @@
       );
     };
 
-    return React.createElement('div', { className: 'space-y-6' },
+    return React.createElement(React.Fragment, null,
+      showReviewModal && React.createElement(ReviewModal, {
+        projectId,
+        onClose: (refreshed) => { setShowReviewModal(false); refreshed && fetchData(); },
+        onReview: handleReview,
+        setMessage,
+      }),
+      React.createElement('div', { className: 'space-y-6' },
       /* 返回按钮 */
       React.createElement('button', {
         onClick: onBack,
@@ -163,14 +233,44 @@
           ),
           React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
             isAdmin
-              ? React.createElement('select', {
-                  value: project.status,
-                  onChange: handleStatusChange,
-                  className: `text-xs px-2 py-1 rounded border ${REVIEW_STATUS_COLORS[project.status] || 'bg-gray-100'} cursor-pointer`,
-                },
-                  ADMIN_STATUS_OPTIONS.map(opt =>
-                    React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+              ? React.createElement(React.Fragment, null,
+                  React.createElement('select', {
+                    value: project.status,
+                    onChange: handleStatusChange,
+                    className: `text-xs px-2 py-1 rounded border ${REVIEW_STATUS_COLORS[project.status] || 'bg-gray-100'} cursor-pointer`,
+                  },
+                    ADMIN_STATUS_OPTIONS.map(opt =>
+                      React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                    ),
                   ),
+                  project.status === 'pending_activation' && React.createElement('button', {
+                    onClick: async () => {
+                      try {
+                        await api.put(`/projects/${projectId}/activate`);
+                        setMessage({ type: 'success', content: '项目已激活，进入规划阶段' });
+                        fetchData();
+                      } catch (err) {
+                        setMessage({ type: 'error', content: '激活失败' });
+                      }
+                    },
+                    className: 'text-xs bg-green-100 text-green-600 px-2 py-1 rounded hover:bg-green-200 mr-1',
+                  }, React.createElement('i', { className: 'fas fa-play mr-1' }), '激活项目'),
+                  project.status === 'planned' && React.createElement('button', {
+                    onClick: () => setShowReviewModal(true),
+                    className: 'text-xs bg-yellow-100 text-yellow-600 px-2 py-1 rounded hover:bg-yellow-200 mr-1',
+                  }, React.createElement('i', { className: 'fas fa-clipboard-check mr-1' }), '提交审核'),
+                  project.status === 'review_passed' && React.createElement('button', {
+                    onClick: async () => {
+                      try {
+                        await api.put(`/projects/${projectId}/start-dev`);
+                        setMessage({ type: 'success', content: '项目已进入研发阶段' });
+                        fetchData();
+                      } catch (err) {
+                        setMessage({ type: 'error', content: '启动研发失败' });
+                      }
+                    },
+                    className: 'text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 mr-1',
+                  }, React.createElement('i', { className: 'fas fa-flask mr-1' }), '开始研发'),
                 )
               : React.createElement('span', {
                   className: `text-xs px-3 py-1 rounded-full ${REVIEW_STATUS_COLORS[project.status] || 'bg-gray-100'}`,

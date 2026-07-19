@@ -34,10 +34,12 @@ model Project {
   acceptanceCriteria String?  @map("acceptance_criteria")
   githubUrl          String?  @map("github_url")
   extraInfo          String?  @default("{}") @map("extra_info")
-  status             String   @default("planning")
+  status             String   @default("pending_activation")
   creatorAgentId     String   @map("creator_agent_id")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
+
+  reviewComment String?  @map("review_comment")
 
   creatorAgent Agent    @relation("ProjectCreator", fields: [creatorAgentId], references: [id])
   tasks        Task[]
@@ -61,6 +63,9 @@ model Task {
   reviewedAt         DateTime? @map("reviewed_at")
   submitNote         String?
   comment            String?
+  type               String   @default("serial")
+  dependsOn          String   @default("[]")
+  wfOrder            Int?
 
   project      Project  @relation(fields: [projectId], references: [id])
   parentTask   Task?    @relation("SubTasks", fields: [parentTaskId], references: [id])

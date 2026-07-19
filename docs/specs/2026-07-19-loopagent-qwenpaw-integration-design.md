@@ -88,11 +88,12 @@ model Project {
 ```typescript
 // src/platforms/agent-platform.interface.ts
 
-/** Agent 运行状态 */
+/** Agent 运行状态（平台归一化后的通用格式） */
 export interface AgentStatus {
   agentId: string;
   name: string;
-  status: 'idle' | 'busy' | 'offline' | 'running' | 'disabled';
+  status: 'idle' | 'busy' | 'offline';
+  /** idle = 可分配任务 | busy = 正在执行 | offline = 不可用（禁用/断连） */
   capabilities: string[];
   lastHeartbeat?: string;
 }
@@ -111,8 +112,6 @@ export interface TaskResult {
   status: 'completed' | 'failed';
   output?: string;
   error?: string;
-  /** QwenPaw 侧的 taskRef，用于轮询 */
-  externalRef?: string;
 }
 
 /** Agent 平台接口 */
@@ -129,7 +128,7 @@ export interface AgentPlatform {
   /** 向指定 Agent 提交后台任务 */
   submitTask(agentId: string, task: TaskSubmission): Promise<{ externalRef: string }>;
 
-  /** 轮询已提交任务的结果 */
+  /** 轮询已提交任务的结果。返回 null 表示任务仍在执行中 */
   pollTaskResult(externalRef: string): Promise<TaskResult | null>;
 
   /** 发送消息给指定 Agent（如审核不通过原因） */
@@ -168,7 +167,7 @@ AgentPlatformFactory.register('qwenpaw', QwenPawPlatform);
 | `discoverAgents(caps)` | `GET /api/agents` + 能力过滤 | 过滤出 idle 且匹配能力 |
 | `submitTask(agentId, task)` | `POST /console/chat/task` | 提交后台任务，返回 task_id |
 | `pollTaskResult(ref)` | `GET /console/chat/task/{ref}` | 轮询 task 状态，完成则返回结果 |
-| `sendMessage(agentId, msg)` | `POST /console/chat` | 向 Agent 发送消息 |
+| `sendMessage(agentId, msg)` | `POST /console/chat/task` | 提交后台消息任务，Agent 空闲时会处理 |
 
 > 配置项（从 `.env` 读取）：
 > - `QWENPAW_BASE_URL` — QwenPaw Console 地址
@@ -176,13 +175,16 @@ AgentPlatformFactory.register('qwenpaw', QwenPawPlatform);
 
 ### 2.5 轮询策略（不打扰忙的 Agent）
 
+- 轮询间隔：**5 秒**（可通过 `QWENPAW_POLL_INTERVAL` 环境变量配置）
+- 轮询超时：**300 秒**（默认 5 分钟，可通过 `QWENPAW_POLL_TIMEOUT` 配置），超时则标记为 failed
+
 ```
 1. 调用 listAllAgents() 获取全量 Agent 列表
 2. 过滤出 status === 'idle' 的 Agent
 3. 按 capabilities 匹配任务需求
 4. 调用 checkAgentStatus(agentId) 二次确认空闲
 5. 确认空闲 → submitTask
-6. 以 N 秒间隔轮询 pollTaskResult(externalRef)
+6. 以 5s 间隔轮询 pollTaskResult(externalRef)，最多 300s
 7. 取到结果后 → 更新 loopagent 侧 task 状态
 8. 检查 DAG 下游依赖 → 解锁 blocked 任务
 ```

@@ -158,10 +158,10 @@ export class WorkflowEngine {
 
   private async executeNode(platform: any, projectId: string, node: TaskNode): Promise<void> {
     // 1. 发现空闲 Agent
-    const agents = await platform.discoverAgents([]);
+    let agents = await platform.discoverAgents([]);
     if (agents.length === 0) {
       console.warn(`[WORKFLOW] 无可用 Agent，任务 ${node.id} 等待中`);
-      await this.waitForAgent(platform, node);
+      agents = await this.waitForAgent(platform, node);
     }
 
     const agent = agents[0];
@@ -216,11 +216,11 @@ export class WorkflowEngine {
     return QwenPawConfig.fromEnv();
   }
 
-  private async waitForAgent(platform: any, node: TaskNode): Promise<void> {
+  private async waitForAgent(platform: any, node: TaskNode): Promise<any[]> {
     for (let i = 0; i < 30; i++) {  // 最多等 5 分钟
       await this.sleep(10000);
       const agents = await platform.discoverAgents([]);
-      if (agents.length > 0) return;
+      if (agents.length > 0) return agents;
     }
     throw new Error(`任务 ${node.id} 等待 Agent 超时`);
   }

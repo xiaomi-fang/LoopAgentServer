@@ -10,6 +10,8 @@ import authRoutes from './routes/auth';
 import reviewRecordRoutes from './routes/review-records';
 import mcpRoutes from './routes/mcp';
 import mcpSseRoutes from './routes/mcp-sse';
+import { AgentPlatformFactory } from './platforms/platform-factory';
+import { QwenPawPlatform } from './platforms/qwenpaw/qwenpaw-platform';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -86,6 +88,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 export { app };
+
+// 注册 Agent 平台
+AgentPlatformFactory.register('qwenpaw', QwenPawPlatform);
 
 if (require.main === module) {
   async function main() {

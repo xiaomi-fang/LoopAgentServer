@@ -321,6 +321,7 @@
         [
           { key: 'tasks', label: '任务树', icon: 'fa-sitemap' },
           { key: 'products', label: '产物', icon: 'fa-box' },
+          { key: 'workflow', label: '工作流', icon: 'fa-project-diagram' },
         ].map(tab =>
           React.createElement('button', {
             key: tab.key,
@@ -362,6 +363,16 @@
           ),
         ),
         renderProductTable(),
+      ),
+
+      /* 工作流面板 — 仅研发阶段项目可见 */
+      activeTab === 'workflow' && React.createElement('div', null,
+        (project.status === 'in_development' || project.status === 'development_paused')
+          ? React.createElement(window.LoopAgent.WorkflowEditor, { projectId, setMessage, isAdmin })
+          : React.createElement('div', { className: 'text-center py-12 text-gray-400' },
+              React.createElement('i', { className: 'fas fa-lock text-4xl mb-3 block' }),
+              React.createElement('p', null, '工作流仅项目进入研发阶段后可用'),
+            ),
       ),
     );
   }

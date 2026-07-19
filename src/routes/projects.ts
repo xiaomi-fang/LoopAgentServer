@@ -69,4 +69,28 @@ router.put('/:id', requireAdmin, asyncHandler(async (req, res) => {
   res.json(project);
 }));
 
+// ---- 专用状态操作 ---- //
+
+// 激活项目 → 进入规划阶段
+router.put('/:id/activate', requireAdmin, asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  const project = await projectService.activateProject(id);
+  res.json({ message: '项目已进入规划阶段', project });
+}));
+
+// 审核项目（通过/驳回）
+router.put('/:id/review', requireAdmin, asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  const { approved, comment } = req.body;
+  const project = await projectService.reviewProject(id, approved, comment);
+  res.json({ message: approved ? '审核通过' : '审核不通过', project });
+}));
+
+// 开始研发
+router.put('/:id/start-dev', requireAdmin, asyncHandler(async (req, res) => {
+  const id = req.params.id as string;
+  const project = await projectService.startDev(id);
+  res.json({ message: '项目已进入研发阶段', project });
+}));
+
 export default router;

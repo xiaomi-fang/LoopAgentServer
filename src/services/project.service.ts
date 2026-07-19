@@ -1,3 +1,5 @@
+import { validateProjectTransition } from '../state-machine';
+import { ProjectStatus } from '../types';
 import prisma from '../prisma';
 
 export async function createProject(data: {
@@ -17,7 +19,7 @@ export async function createProject(data: {
       acceptanceCriteria: data.acceptanceCriteria ?? null,
       githubUrl: data.githubUrl ?? null,
       extraInfo: JSON.stringify(data.extraInfo ?? {}),
-      status: 'planning',
+      status: ProjectStatus.PENDING_ACTIVATION,
       creatorAgentId: data.creatorAgentId,
     },
   });
@@ -89,13 +91,22 @@ function buildTaskTree(tasks: any[]) {
 }
 
 export async function deleteProject(projectId: string) {
-  // 先删除项目下所有任务的产物
+  // 1) 解除任务间的父子关系（自引用外键），避免子任务约束报错
+  await prisma.task.updateMany({
+    where: { projectId, parentTaskId: { not: null } },
+    data: { parentTaskId: null },
+  });
+
+  // 2) 按外键依赖顺序删除关联数据
   const tasks = await prisma.task.findMany({ where: { projectId } });
   const taskIds = tasks.map(t => t.id);
   if (taskIds.length > 0) {
     await prisma.product.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.reviewRecord.deleteMany({ where: { taskId: { in: taskIds } } });
     await prisma.task.deleteMany({ where: { projectId } });
   }
+
+  // 3) 最后删项目本身
   await prisma.project.delete({ where: { id: projectId } });
   return { id: projectId };
 }
@@ -119,5 +130,50 @@ export async function updateProject(projectId: string, data: {
   return prisma.project.update({
     where: { id: projectId },
     data: updateData,
+  });
+}
+
+export async function activateProject(projectId: string) {
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new Error('Project not found');
+    validateProjectTransition(project.status, ProjectStatus.PLANNING);
+
+    return tx.project.update({
+      where: { id: projectId },
+      data: { status: ProjectStatus.PLANNING },
+    });
+  });
+}
+
+export async function markPlanned(projectId: string) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { status: ProjectStatus.PLANNED },
+  });
+}
+
+export async function reviewProject(projectId: string, approved: boolean, comment?: string) {
+  if (!approved && !comment) {
+    throw new Error('审核不通过时必须填写原因');
+  }
+
+  return prisma.project.update({
+    where: { id: projectId },
+    data: {
+      status: approved ? ProjectStatus.REVIEW_PASSED : ProjectStatus.REVIEW_FAILED,
+      reviewComment: comment ?? null,
+    },
+  });
+}
+
+export async function startDev(projectId: string) {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new Error('Project not found');
+  validateProjectTransition(project.status, ProjectStatus.IN_DEVELOPMENT);
+
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { status: ProjectStatus.IN_DEVELOPMENT },
   });
 }
